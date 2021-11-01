@@ -10,6 +10,7 @@ CC        := $(PREFIX)gcc
 CXX       := $(PREFIX)g++
 LD        := $(PREFIX)gcc
 AR        := $(PREFIX)ar
+OBJCOPY   := $(PREFIX)objcopy
 ###############################################################################
 #                             Include directories                             #
 ###############################################################################
@@ -67,6 +68,8 @@ CFLAGS += -fno-builtin -fshort-enums
 CXXFLAGS += $(OPT)
 
 # Assembler flags common to all targets
+ASMFLAGS += -MP -MD
+ASMFLAGS += -x assembler-with-cpp
 ASMFLAGS += -g3
 ASMFLAGS += -mcpu=cortex-m4
 ASMFLAGS += -mthumb -mabi=aapcs
@@ -106,7 +109,10 @@ $(obj_file) : $(src_file)
 endef
 
 
-
+define ASM_RULE
+$(obj_file) : $(src_file)
+	$(CC) $(ASMFLAGS)  -o $(obj_file) -c $(src_file)
+endef
 
 
 
