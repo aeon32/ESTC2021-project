@@ -1,2 +1,2 @@
-# ESTC2021-project
-ESTC-2021 main project
+# ESTC-workflow-test
+Repository for github workflow testing
