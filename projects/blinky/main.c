@@ -58,19 +58,29 @@
  */
 int main(void)
 {
+    const int LED_BLINK_TIMES[LEDS_NUMBER] = {6, 5, 9, 9}; //equal to device id
+    const int LED_ON_TIME = 500;   //Time period of led switched on/off
+    
     /* Configure board. */
     bsp_board_init(BSP_INIT_LEDS);
 
+    int current_led = 0;
     /* Toggle LEDs. */
     while (true)
     {
-    
-        for (int i = 0; i < LEDS_NUMBER; i++)
+
+        for (int i = 0; i < LED_BLINK_TIMES[current_led]; i++)
         {
-            bsp_board_led_invert(i);
-            nrf_delay_ms(500);
+            bsp_board_led_invert(current_led);
+            nrf_delay_ms(LED_ON_TIME);
+            bsp_board_led_invert(current_led);
+            nrf_delay_ms(LED_ON_TIME);
         }
-    
+
+        current_led++;
+        if (current_led == LEDS_NUMBER)    
+            current_led = 0;
+        
     }
 }
 
