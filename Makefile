@@ -4,11 +4,7 @@ BLINKY_PATH = $(BUILD_ROOT)/projects/blinky/
 
 all: blinky
 
-bin:
-	mkdir -p $(BIN_DIR)
-
-
-blinky: bin  
+blinky: 
 	make -C $(BLINKY_PATH)
 
 clean:
