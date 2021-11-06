@@ -1,84 +1,84 @@
-/**
- * Copyright (c) 2014 - 2021, Nordic Semiconductor ASA
- *
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted provided that the following conditions are met:
- *
- * 1. Redistributions of source code must retain the above copyright notice, this
- *    list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form, except as embedded into a Nordic
- *    Semiconductor ASA integrated circuit in a product or a software update for
- *    such product, must reproduce the above copyright notice, this list of
- *    conditions and the following disclaimer in the documentation and/or other
- *    materials provided with the distribution.
- *
- * 3. Neither the name of Nordic Semiconductor ASA nor the names of its
- *    contributors may be used to endorse or promote products derived from this
- *    software without specific prior written permission.
- *
- * 4. This software, with or without modification, must only be used with a
- *    Nordic Semiconductor ASA integrated circuit.
- *
- * 5. Any software provided in binary form under this license must not be reverse
- *    engineered, decompiled, modified and/or disassembled.
- *
- * THIS SOFTWARE IS PROVIDED BY NORDIC SEMICONDUCTOR ASA "AS IS" AND ANY EXPRESS
- * OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
- * OF MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL NORDIC SEMICONDUCTOR ASA OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
- * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
- * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
-/** @file
- *
- * @defgroup blinky_example_main main.c
- * @{
- * @ingroup blinky_example
- * @brief Blinky Example Application main file.
- *
- * This file contains the source code for a sample application to blink LEDs.
- *
- */
 
 #include <stdbool.h>
 #include <stdint.h>
 #include <nrf_delay.h>
 #include <boards.h>
 
+//total leds number
+#define ESTC_LEDS_NUMBER 4
+
+//pin numbers. Constants are defined in nRF52840 Dongle UserGuide
+static const uint8_t ESTC_LEDS_PINS[ESTC_LEDS_NUMBER] = 
+   {
+    NRF_GPIO_PIN_MAP(0,6),
+    NRF_GPIO_PIN_MAP(0,8),
+    NRF_GPIO_PIN_MAP(1,9),
+    NRF_GPIO_PIN_MAP(0,12)
+   };
+
+static const int ESTC_LED_BLINK_TIMES[ESTC_LEDS_NUMBER] = {6, 5, 9, 9}; //equal to device id
+static const int ESTC_LED_ON_TIME = 500;   //Time period of led switched on/off   
+
+void configure_gpio()
+{
+
+   for ( int i = 0; i < ESTC_LEDS_NUMBER; i++)
+   {
+       int pin_number = ESTC_LEDS_PINS [i];
+       //configure all led pins for output
+       nrf_gpio_cfg(pin_number, NRF_GPIO_PIN_DIR_OUTPUT, NRF_GPIO_PIN_INPUT_DISCONNECT,
+                    NRF_GPIO_PIN_NOPULL, NRF_GPIO_PIN_S0S1, NRF_GPIO_PIN_NOSENSE
+                   );
+       //switch off led by setting high level
+       nrf_gpio_pin_write(pin_number, 1);
+   };
+
+};
+
+void switch_led_on (int led_number)
+{
+
+    int pin_number = ESTC_LEDS_PINS [led_number];
+    nrf_gpio_pin_clear(pin_number);
+
+};
+
+void switch_led_off (int led_number)
+{
+
+    int pin_number = ESTC_LEDS_PINS [led_number];
+    nrf_gpio_pin_set(pin_number);
+
+};
+
+
 /**
  * @brief Function for application main entry.
  */
 int main(void)
 {
-    const int LED_BLINK_TIMES[LEDS_NUMBER] = {6, 5, 9, 9}; //equal to device id
-    const int LED_ON_TIME = 500;   //Time period of led switched on/off
+
     
     /* Configure board. */
-    bsp_board_init(BSP_INIT_LEDS);
+    configure_gpio();
 
     int current_led = 0;
     /* Toggle LEDs. */
     while (true)
     {
 
-        for (int i = 0; i < LED_BLINK_TIMES[current_led]; i++)
+
+        for (int i = 0; i < ESTC_LED_BLINK_TIMES[current_led]; i++)
         {
-            bsp_board_led_invert(current_led);
-            nrf_delay_ms(LED_ON_TIME);
-            bsp_board_led_invert(current_led);
-            nrf_delay_ms(LED_ON_TIME);
+            
+            switch_led_on(current_led);
+            nrf_delay_ms(ESTC_LED_ON_TIME);
+            switch_led_off(current_led);
+            nrf_delay_ms(ESTC_LED_ON_TIME);
         }
 
         current_led++;
-        if (current_led == LEDS_NUMBER)    
+        if (current_led == ESTC_LEDS_NUMBER)    
             current_led = 0;
         
     }
