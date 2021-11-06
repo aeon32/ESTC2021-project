@@ -21,7 +21,7 @@ static const uint8_t ESTC_BUTTON_PIN = NRF_GPIO_PIN_MAP(1,6);
 
 
 //we encode blinking sequence as array of led number (equal to (6, 5, 9, 9) - device id)
-static const int ESTC_BLINK_SEQUENCE[] = {
+static const uint32_t ESTC_BLINK_SEQUENCE[] = {
     0, 0, 0, 0, 0, 0,
     1, 1, 1, 1, 1,
     2, 2, 2, 2, 2, 2, 2, 2, 2,
@@ -52,7 +52,7 @@ void configure_gpio()
 void switch_led_on (int led_number)
 {
 
-    int pin_number = ESTC_LEDS_PINS [led_number];
+    uint32_t pin_number = ESTC_LEDS_PINS [led_number];
     nrf_gpio_pin_clear(pin_number);
 
 };
@@ -60,11 +60,16 @@ void switch_led_on (int led_number)
 void switch_led_off (int led_number)
 {
 
-    int pin_number = ESTC_LEDS_PINS [led_number];
+    uint32_t pin_number = ESTC_LEDS_PINS [led_number];
     nrf_gpio_pin_set(pin_number);
 
 };
 
+
+bool button_is_pressed()
+{
+   return nrf_gpio_pin_read(ESTC_BUTTON_PIN) == 0; 
+};
 
 /**
  * @brief Function for application main entry.
@@ -77,26 +82,37 @@ int main(void)
     configure_gpio();
 
     unsigned int sequence_step = 0;
-    
-    while (true)
-    {
-        uint32_t state = nrf_gpio_pin_read(ESTC_BUTTON_PIN );
-        nrf_gpio_pin_write( ESTC_LEDS_PINS[0], state);
-
-
-    };
-
-
     const size_t SEQUENCE_SIZE = sizeof(ESTC_BLINK_SEQUENCE)/sizeof(ESTC_BLINK_SEQUENCE[0]);
+
     /* Toggle LEDs. */
     while (true)
     {
-
-        int current_led = ESTC_BLINK_SEQUENCE[sequence_step];
-        switch_led_on(current_led);
-        nrf_delay_ms(ESTC_LED_ON_TIME);
+        uint32_t current_led = ESTC_BLINK_SEQUENCE[sequence_step];
+        uint32_t delay_counter = 0;
         switch_led_off(current_led);
-        nrf_delay_ms(ESTC_LED_ON_TIME);
+
+        while (delay_counter < ESTC_LED_ON_TIME)
+        {
+            if (button_is_pressed())
+            {
+                nrf_delay_ms(1);
+                delay_counter++;
+
+            };
+        };
+
+        delay_counter = 0;
+        switch_led_on(current_led);
+
+        while (delay_counter < ESTC_LED_ON_TIME)
+        {
+            if (button_is_pressed())
+            {
+                nrf_delay_ms(1);
+                delay_counter++;
+            };
+        };
+        switch_led_off(current_led);
 
         sequence_step++;
         if (sequence_step == SEQUENCE_SIZE)    
