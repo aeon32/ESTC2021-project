@@ -65,11 +65,66 @@ void switch_led_off (int led_number)
 
 };
 
+void led_toggle (int led_number)
+{
+
+    uint32_t pin_number = ESTC_LEDS_PINS [led_number];
+    nrf_gpio_pin_toggle(pin_number);
+
+};
+
 
 bool button_is_pressed()
 {
    return nrf_gpio_pin_read(ESTC_BUTTON_PIN) == 0; 
 };
+
+
+
+
+typedef struct 
+{
+    uint32_t current_tick;
+    uint32_t sequence_step;
+    bool led_switched_on;
+} BlinkyMachineState;
+
+void blinky_machine_state_init(BlinkyMachineState * blinkyMachineState)
+{
+    blinkyMachineState->current_tick = 0;
+    blinkyMachineState->sequence_step = 0;
+    blinkyMachineState->led_switched_on = false;
+};
+
+void blinky_machine_state_next(BlinkyMachineState * blinkyMachineState)
+{
+    
+    static const size_t SEQUENCE_SIZE = sizeof(ESTC_BLINK_SEQUENCE)/sizeof(ESTC_BLINK_SEQUENCE[0]);
+    uint32_t current_led = ESTC_BLINK_SEQUENCE[blinkyMachineState->sequence_step];
+
+    blinkyMachineState->current_tick++;
+    
+
+    if (blinkyMachineState->current_tick == ESTC_LED_ON_TIME)
+    {
+        
+        blinkyMachineState->current_tick = 0;
+        if (blinkyMachineState->led_switched_on)
+        {
+            blinkyMachineState->sequence_step++;
+            if (blinkyMachineState->sequence_step == SEQUENCE_SIZE)
+            {
+               blinkyMachineState->sequence_step = 0;
+            };
+
+        };
+        //we should toggle led
+        led_toggle(current_led);
+        blinkyMachineState->led_switched_on = !blinkyMachineState->led_switched_on;
+    }
+
+};
+
 
 /**
  * @brief Function for application main entry.
@@ -81,43 +136,19 @@ int main(void)
     /* Configure board. */
     configure_gpio();
 
-    unsigned int sequence_step = 0;
-    const size_t SEQUENCE_SIZE = sizeof(ESTC_BLINK_SEQUENCE)/sizeof(ESTC_BLINK_SEQUENCE[0]);
+    BlinkyMachineState  blinkyMachineState;
 
+    blinky_machine_state_init(&blinkyMachineState);
     /* Toggle LEDs. */
     while (true)
     {
-        uint32_t current_led = ESTC_BLINK_SEQUENCE[sequence_step];
-        uint32_t delay_counter = 0;
-        switch_led_off(current_led);
-
-        while (delay_counter < ESTC_LED_ON_TIME)
+        if (button_is_pressed())
         {
-            if (button_is_pressed())
-            {
-                nrf_delay_ms(1);
-                delay_counter++;
+            blinky_machine_state_next( &blinkyMachineState);
 
-            };
         };
+        nrf_delay_ms(1);
 
-        delay_counter = 0;
-        switch_led_on(current_led);
-
-        while (delay_counter < ESTC_LED_ON_TIME)
-        {
-            if (button_is_pressed())
-            {
-                nrf_delay_ms(1);
-                delay_counter++;
-            };
-        };
-        switch_led_off(current_led);
-
-        sequence_step++;
-        if (sequence_step == SEQUENCE_SIZE)    
-            sequence_step = 0;
-        
     }
 }
 
