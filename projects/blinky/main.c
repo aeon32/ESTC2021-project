@@ -4,8 +4,12 @@
 #include <nrf_delay.h>
 #include <boards.h>
 
+#include "logger.h"
+
 //total leds number
 #define ESTC_LEDS_NUMBER 4
+
+
 
 //pin numbers for leds. Constants are defined in nRF52840 Dongle UserGuide
 static const uint8_t ESTC_LEDS_PINS[ESTC_LEDS_NUMBER] = 
@@ -108,6 +112,8 @@ void blinky_machine_state_next(BlinkyMachineState * blinkyMachineState)
     if (blinkyMachineState->current_tick == ESTC_LED_ON_TIME)
     {
         
+        NRF_LOG_INFO("Led %d toggled", current_led);
+        
         blinkyMachineState->current_tick = 0;
         if (blinkyMachineState->led_switched_on)
         {
@@ -135,16 +141,24 @@ int main(void)
     
     /* Configure board. */
     configure_gpio();
+    log_init();
 
     BlinkyMachineState  blinkyMachineState;
 
     blinky_machine_state_init(&blinkyMachineState);
     /* Toggle LEDs. */
+
+    NRF_LOG_INFO("Entering main loop");
     while (true)
     {
         if (button_is_pressed())
         {
             blinky_machine_state_next( &blinkyMachineState);
+
+        };
+        NRF_LOG_PROCESS();
+        while (app_usbd_event_queue_process())
+        {
 
         };
         nrf_delay_ms(1);
