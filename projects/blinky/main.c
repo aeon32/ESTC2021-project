@@ -2,9 +2,14 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <nrf_delay.h>
+#include <nrf_log.h>
+#include <nrf_log_ctrl.h>
+#include <nrf_log_default_backends.h>
+#include <nrf_log_backend_usb.h>
+#include <app_usbd.h>
+
 #include <boards.h>
 
-#include "logger.h"
 
 //total leds number
 #define ESTC_LEDS_NUMBER 4
@@ -132,6 +137,16 @@ void blinky_machine_state_next(BlinkyMachineState * blinkyMachineState)
 };
 
 
+void log_init()
+{
+
+    ret_code_t ret = NRF_LOG_INIT(NULL);
+    APP_ERROR_CHECK(ret);
+
+    NRF_LOG_DEFAULT_BACKENDS_INIT();
+
+};
+
 /**
  * @brief Function for application main entry.
  */
@@ -156,15 +171,12 @@ int main(void)
             blinky_machine_state_next( &blinkyMachineState);
 
         };
+        LOG_BACKEND_USB_PROCESS();
         NRF_LOG_PROCESS();
-        while (app_usbd_event_queue_process())
-        {
 
-        };
         nrf_delay_ms(1);
-
-    }
-}
+    };
+};
 
 /**
  *@}
