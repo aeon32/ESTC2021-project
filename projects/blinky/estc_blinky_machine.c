@@ -46,9 +46,9 @@ void estc_blinky_machine_next_state(ESTCBlinkyMachine * blinky_machine)
                 blinky_machine->pwm_value++;
                 NRF_LOG_INFO("PWM_VALUE %d", blinky_machine->pwm_value);
 
-            };
+            }
 
-        };
+        }
 
         if (!blinky_machine->brightness_increasing)
         {

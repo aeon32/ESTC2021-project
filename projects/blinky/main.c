@@ -27,7 +27,7 @@ static const uint8_t ESTC_LEDS_PINS[ESTC_LEDS_NUMBER] =
     NRF_GPIO_PIN_MAP(0,8),
     NRF_GPIO_PIN_MAP(1,9),
     NRF_GPIO_PIN_MAP(0,12)
-   };
+   }
 
 //pin numbers for button. Constants are defined in nRF52840 Dongle UserGuide
 static const uint8_t ESTC_BUTTON_PIN = NRF_GPIO_PIN_MAP(1,6);
@@ -40,7 +40,7 @@ static const uint32_t ESTC_BLINK_SEQUENCE[] = {
     2, 2, 2, 2, 2, 2, 2, 2, 2,
     3, 3, 3, 3, 3, 3, 3, 3, 3 
 
-};
+}
 
 static const size_t SEQUENCE_SIZE = sizeof(ESTC_BLINK_SEQUENCE)/sizeof(ESTC_BLINK_SEQUENCE[0]);
 
@@ -69,18 +69,18 @@ void configure_gpio()
                    );
        //switch off led by setting high level
        nrf_gpio_pin_write(pin_number, 1);
-   };
+   }
 
    nrf_gpio_cfg(ESTC_BUTTON_PIN, NRF_GPIO_PIN_DIR_INPUT, NRF_GPIO_PIN_INPUT_CONNECT,
                  NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_S0S1, NRF_GPIO_PIN_NOSENSE);   
 
-};
+}
 
 
 bool button_is_pressed()
 {
    return nrf_gpio_pin_read(ESTC_BUTTON_PIN) == 0; 
-};
+}
 
 
 void log_init()
@@ -91,7 +91,7 @@ void log_init()
 
     NRF_LOG_DEFAULT_BACKENDS_INIT();
 
-};
+}
 
 
 
