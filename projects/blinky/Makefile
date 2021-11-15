@@ -10,6 +10,8 @@ OBJ_DIRECTORY := $(OUTPUT_DIRECTORY)/obj
 BINARY_PATH = $(OUTPUT_DIRECTORY)/$(PROJECT_NAME)
 HEX_PATH = $(OUTPUT_DIRECTORY)/$(PROJECT_NAME).hex
 
+
+CFLAGS += -DUSE_APP_CONFIG
 CFLAGS += -DAPP_TIMER_V2 
 CFLAGS += -DAPP_TIMER_V2_RTC1_ENABLED 
 CFLAGS += -D__HEAP_SIZE=8192
@@ -24,7 +26,6 @@ LDFLAGS +=  -L$(SDK_ROOT)/modules/nrfx/mdk  -T$(LINKER_SCRIPT)
 
 #Sources and other dependencies
 C_SRCS := main.c \
-  logger.c \
   $(SDK_ROOT)/components/libraries/log/src/nrf_log_frontend.c \
   $(SDK_ROOT)/components/libraries/log/src/nrf_log_str_formatter.c \
   $(SDK_ROOT)/components/libraries/log/src/nrf_log_backend_usb.c \
