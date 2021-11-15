@@ -11,6 +11,9 @@
 
 #include <boards.h>
 
+#include "estc_pwm.h"
+#include "estc_blinky_machine.h"
+
 
 //total leds number
 #define ESTC_LEDS_NUMBER 4
@@ -73,152 +76,12 @@ void configure_gpio()
 
 };
 
-void switch_led_on (int led_number)
-{
-
-    uint32_t pin_number = ESTC_LEDS_PINS [led_number];
-    nrf_gpio_pin_clear(pin_number);
-
-};
-
-void switch_led_off (int led_number)
-{
-
-    uint32_t pin_number = ESTC_LEDS_PINS [led_number];
-    nrf_gpio_pin_set(pin_number);
-
-};
-
-void led_toggle (int led_number)
-{
-
-    uint32_t pin_number = ESTC_LEDS_PINS [led_number];
-    nrf_gpio_pin_toggle(pin_number);
-
-};
-
 
 bool button_is_pressed()
 {
    return nrf_gpio_pin_read(ESTC_BUTTON_PIN) == 0; 
 };
 
-
-
-
-typedef struct 
-{
-    //timestamp when pwm period was started. LED had to be switched on.
-    nrfx_systick_state_t  pwm_period_start_timestamp;
-    //from 0 to PWM_VALUE_MAX
-    uint32_t pwm_value;    
-    uint32_t new_pwm_value;
-    bool led_switched_on;
-
-    nrfx_systick_state_t  current_pwm_value_start_timestamp;
-    bool brightness_increasing;
-    uint32_t sequence_step;
- 
-} BlinkyMachineState;
-
-void blinky_machine_state_init(BlinkyMachineState * blinkyMachineState)
-{
-    
-    nrfx_systick_get(&blinkyMachineState->pwm_period_start_timestamp);
-    nrfx_systick_get(&blinkyMachineState->current_pwm_value_start_timestamp);
-    blinkyMachineState->pwm_value = 0;
-    blinkyMachineState->new_pwm_value = 0;
-    blinkyMachineState->sequence_step = 0;
-    blinkyMachineState->led_switched_on = true;
-    blinkyMachineState->brightness_increasing = true;
-};
-
-
-void blinky_machine_state_next(BlinkyMachineState * blinky_machine_state)
-{
-    
-    uint32_t current_led = ESTC_BLINK_SEQUENCE[blinky_machine_state->sequence_step];
-
-
-    if (nrfx_systick_test(&blinky_machine_state->current_pwm_value_start_timestamp, BLINK_PERIOD / PWM_VALUE_MAX/ 2))
-    {
-        nrfx_systick_get(&blinky_machine_state->current_pwm_value_start_timestamp);
-        
-        if (blinky_machine_state->brightness_increasing)
-        {
-            if (blinky_machine_state->new_pwm_value == PWM_VALUE_MAX)
-            {
-                //now led is fading..
-                blinky_machine_state->brightness_increasing = false;
-            } else {
-                blinky_machine_state->new_pwm_value++;
-                NRF_LOG_INFO("PWM_VALUE %d", blinky_machine_state->new_pwm_value);
-
-            };
-
-        };
-
-        if (!blinky_machine_state->brightness_increasing)
-        {
-            if (blinky_machine_state->new_pwm_value == 0)
-            {
-                //led have done his working cycle, go to the next
-                NRF_LOG_INFO("Led %d toggled", current_led);
-                blinky_machine_state->sequence_step++;
-                if (blinky_machine_state->sequence_step == SEQUENCE_SIZE)
-                {
-                  blinky_machine_state->sequence_step = 0;
-                };
-                blinky_machine_state->brightness_increasing = true;
-
-
-            } else {
-               blinky_machine_state->new_pwm_value--;
-               NRF_LOG_INFO("PWM_VALUE %d", blinky_machine_state->new_pwm_value);
-
-            };
-
-
-        };     
-
-    };
-    
-};
-
-
-void blinky_machine_state_pwm_handle(BlinkyMachineState * blinky_machine_state)
-{
-    
-    
-    uint32_t current_led = ESTC_BLINK_SEQUENCE[blinky_machine_state->sequence_step];
-    
-    if (blinky_machine_state->led_switched_on)
-    {
-        uint32_t led_on_timeout = blinky_machine_state->pwm_value * PWM_PERIOD / PWM_VALUE_MAX;
-        if(nrfx_systick_test(&blinky_machine_state->pwm_period_start_timestamp, led_on_timeout))
-        {
-            switch_led_off(current_led);
-            blinky_machine_state->led_switched_on = false;
-        };
-
-    } else 
-    {
-        uint32_t led_off_timeout = PWM_PERIOD;
-        if(nrfx_systick_test(&blinky_machine_state->pwm_period_start_timestamp, led_off_timeout))
-        {
-            //next pwm period started..
-            nrfx_systick_get(&blinky_machine_state->pwm_period_start_timestamp);
-            blinky_machine_state->pwm_value = blinky_machine_state->new_pwm_value;
-
-            if (blinky_machine_state->pwm_value > 0)
-                switch_led_on(current_led);
-            blinky_machine_state->led_switched_on = true;
-            
-        };        
-
-
-    };
-};
 
 void log_init()
 {
@@ -230,9 +93,8 @@ void log_init()
 
 };
 
-/**
- * @brief Function for application main entry.
- */
+
+
 int main(void)
 {
 
@@ -242,27 +104,43 @@ int main(void)
     log_init();
     nrfx_systick_init();
 
-    BlinkyMachineState  blinkyMachineState;
 
-    blinky_machine_state_init(&blinkyMachineState);
-    /* Toggle LEDs. */
+    ESTCBlinkyMachine blinky_machine;
+    estc_blinky_machine_init(&blinky_machine, ESTC_BLINK_SEQUENCE, SEQUENCE_SIZE, BLINK_PERIOD, PWM_VALUE_MAX);
+
+
+    ESTCPWM pwm_leds[ESTC_LEDS_NUMBER];
+    for (int i = 0; i < ESTC_LEDS_NUMBER; i++)
+    {
+        estc_pwm_init(&pwm_leds[i], ESTC_LEDS_PINS[i], true, PWM_PERIOD, PWM_VALUE_MAX);
+
+    }
+
 
     NRF_LOG_INFO("Entering main loop");
-
-
     while (true)
     {
         if (button_is_pressed())
         {
-            blinky_machine_state_next( &blinkyMachineState);
+            estc_blinky_machine_next_state(&blinky_machine);
+            for (int i = 0; i < ESTC_LEDS_NUMBER; i++)
+            {
+                uint32_t new_led_pwm = estc_blinky_machine_get_led_pwm(&blinky_machine, i);
+                estc_pwm_set_value(&pwm_leds[i], new_led_pwm);
+            }
 
-        };
-        blinky_machine_state_pwm_handle(&blinkyMachineState);
+        }        
+       
+        for (int i = 0; i < ESTC_LEDS_NUMBER; i++)
+        {
+           estc_pwm_handle(&pwm_leds[i]);
+        }
+
         LOG_BACKEND_USB_PROCESS();
         NRF_LOG_PROCESS();
 
-    };
-};
+    }
+}
 
 /**
  *@}
