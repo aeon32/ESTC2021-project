@@ -22,12 +22,12 @@
 
 //pin numbers for leds. Constants are defined in nRF52840 Dongle UserGuide
 static const uint8_t ESTC_LEDS_PINS[ESTC_LEDS_NUMBER] = 
-   {
+{
     NRF_GPIO_PIN_MAP(0,6),
     NRF_GPIO_PIN_MAP(0,8),
     NRF_GPIO_PIN_MAP(1,9),
     NRF_GPIO_PIN_MAP(0,12)
-   }
+};
 
 //pin numbers for button. Constants are defined in nRF52840 Dongle UserGuide
 static const uint8_t ESTC_BUTTON_PIN = NRF_GPIO_PIN_MAP(1,6);
@@ -40,7 +40,7 @@ static const uint32_t ESTC_BLINK_SEQUENCE[] = {
     2, 2, 2, 2, 2, 2, 2, 2, 2,
     3, 3, 3, 3, 3, 3, 3, 3, 3 
 
-}
+};
 
 static const size_t SEQUENCE_SIZE = sizeof(ESTC_BLINK_SEQUENCE)/sizeof(ESTC_BLINK_SEQUENCE[0]);
 
