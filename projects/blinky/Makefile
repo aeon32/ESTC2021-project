@@ -28,6 +28,7 @@ LDFLAGS +=  -L$(SDK_ROOT)/modules/nrfx/mdk  -T$(LINKER_SCRIPT)
 C_SRCS := main.c \
   estc_pwm.c \
   estc_blinky_machine.c\
+  estc_button.c\
   $(SDK_ROOT)/components/libraries/log/src/nrf_log_frontend.c \
   $(SDK_ROOT)/components/libraries/log/src/nrf_log_str_formatter.c \
   $(SDK_ROOT)/components/libraries/log/src/nrf_log_backend_usb.c \

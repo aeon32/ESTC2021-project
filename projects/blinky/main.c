@@ -6,6 +6,7 @@
 #include <nrf_log_ctrl.h>
 #include <nrf_log_default_backends.h>
 #include <nrf_log_backend_usb.h>
+#include <nrfx_gpiote.h>
 #include <nrfx_systick.h>
 #include <app_usbd.h>
 
@@ -13,6 +14,7 @@
 
 #include "estc_pwm.h"
 #include "estc_blinky_machine.h"
+#include "estc_button.h"
 
 
 //total leds number
@@ -27,7 +29,7 @@ static const uint8_t ESTC_LEDS_PINS[ESTC_LEDS_NUMBER] =
     NRF_GPIO_PIN_MAP(0,8),
     NRF_GPIO_PIN_MAP(1,9),
     NRF_GPIO_PIN_MAP(0,12)
-   }
+   };
 
 //pin numbers for button. Constants are defined in nRF52840 Dongle UserGuide
 static const uint8_t ESTC_BUTTON_PIN = NRF_GPIO_PIN_MAP(1,6);
@@ -40,7 +42,7 @@ static const uint32_t ESTC_BLINK_SEQUENCE[] = {
     2, 2, 2, 2, 2, 2, 2, 2, 2,
     3, 3, 3, 3, 3, 3, 3, 3, 3 
 
-}
+};
 
 static const size_t SEQUENCE_SIZE = sizeof(ESTC_BLINK_SEQUENCE)/sizeof(ESTC_BLINK_SEQUENCE[0]);
 
@@ -71,8 +73,8 @@ void configure_gpio()
        nrf_gpio_pin_write(pin_number, 1);
    }
 
-   nrf_gpio_cfg(ESTC_BUTTON_PIN, NRF_GPIO_PIN_DIR_INPUT, NRF_GPIO_PIN_INPUT_CONNECT,
-                 NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_S0S1, NRF_GPIO_PIN_NOSENSE);   
+   //nrf_gpio_cfg(ESTC_BUTTON_PIN, NRF_GPIO_PIN_DIR_INPUT, NRF_GPIO_PIN_INPUT_CONNECT,
+   //              NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_S0S1, NRF_GPIO_PIN_NOSENSE);   
 
 }
 
@@ -93,7 +95,64 @@ void log_init()
 
 }
 
+void led_toggle (int led_number)
+{
 
+    uint32_t pin_number = ESTC_LEDS_PINS [led_number];
+    nrf_gpio_pin_toggle(pin_number);
+
+}
+
+
+ESTCButton button;
+
+
+void button_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
+{
+
+    estc_button_process_click(&button);
+
+    NRF_LOG_INFO("Polarity %d", action);
+
+}
+
+
+void gpiote_init()
+{
+    nrfx_err_t err = nrfx_gpiote_init();
+    APP_ERROR_CHECK(err);
+
+    nrfx_gpiote_in_config_t in_config = NRFX_GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
+    in_config.pull = NRF_GPIO_PIN_PULLUP;
+
+    err = nrfx_gpiote_in_init(ESTC_BUTTON_PIN, &in_config, button_handler);
+    APP_ERROR_CHECK(err);
+
+    nrfx_gpiote_in_event_enable (ESTC_BUTTON_PIN, true);
+  
+}
+
+
+
+int main1()
+{
+    configure_gpio();
+    estc_button_init(&button);
+    log_init();
+    nrfx_systick_init();
+    gpiote_init();
+
+    NRF_LOG_INFO("Entering main loop");
+    while (true)
+    {
+     
+        LOG_BACKEND_USB_PROCESS();
+        NRF_LOG_PROCESS();
+
+    }
+
+
+}
 
 int main(void)
 {
@@ -101,8 +160,10 @@ int main(void)
     
     /* Configure board. */
     configure_gpio();
+    estc_button_init(&button);
     log_init();
     nrfx_systick_init();
+    gpiote_init();
 
 
     ESTCBlinkyMachine blinky_machine;
@@ -116,11 +177,21 @@ int main(void)
 
     }
 
+    bool smooth_blinking = false;
+
 
     NRF_LOG_INFO("Entering main loop");
     while (true)
     {
-        if (button_is_pressed())
+        //some kind of a critical section
+        nrfx_gpiote_in_event_enable (ESTC_BUTTON_PIN, false);
+        
+        if (estc_button_have_been_doubleclicked(&button))
+            smooth_blinking = ! smooth_blinking;
+
+        nrfx_gpiote_in_event_enable (ESTC_BUTTON_PIN, true);
+
+        if (smooth_blinking)
         {
             estc_blinky_machine_next_state(&blinky_machine);
             for (int i = 0; i < ESTC_LEDS_NUMBER; i++)
