@@ -9,6 +9,8 @@
 #include <nrfx_gpiote.h>
 #include <nrfx_systick.h>
 #include <app_usbd.h>
+#include <app_timer.h>
+#include <sdk_errors.h>
 
 #include <boards.h>
 
@@ -132,15 +134,34 @@ void gpiote_init()
   
 }
 
+void rtc_handler (void *p_context)
+{
+   NRF_LOG_INFO("Timer");
+   led_toggle(0);
+}
+
+void rtc_init()
+{
+
+    ret_code_t err  = app_timer_init();
+    APP_ERROR_CHECK(err);
+
+    APP_TIMER_DEF(default_timer_id);
+
+    err = app_timer_create(&default_timer_id, APP_TIMER_MODE_REPEATED, rtc_handler  );
+    err = app_timer_start(default_timer_id, APP_TIMER_CLOCK_FREQ, NULL );
+}
 
 
-int main1()
+
+int main()
 {
     configure_gpio();
     estc_button_init(&button);
     log_init();
     nrfx_systick_init();
-    gpiote_init();
+    rtc_init();
+
 
     NRF_LOG_INFO("Entering main loop");
     while (true)
@@ -154,7 +175,7 @@ int main1()
 
 }
 
-int main(void)
+int main1(void)
 {
 
     
