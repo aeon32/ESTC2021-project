@@ -1,5 +1,6 @@
 #include "application.h"
 
+#include <nrf_log.h>
 
 //pin numbers for leds. Constants are defined in nRF52840 Dongle UserGuide
 const uint8_t ESTC_LEDS_PINS[ESTC_LEDS_NUMBER] = 
@@ -26,9 +27,9 @@ static const uint32_t ESTC_BLINK_SEQUENCE[] = {
 static const size_t SEQUENCE_SIZE = sizeof(ESTC_BLINK_SEQUENCE)/sizeof(ESTC_BLINK_SEQUENCE[0]);
 
 //PWM FREQUENCY in herz
-static const int PWM_FREQUENCY = 1000;
+//static const int PWM_FREQUENCY = 1000;
 //PWM_PERIOD in usec
-static const int PWM_PERIOD = 1000000 / PWM_FREQUENCY;
+//static const int PWM_PERIOD = 1000000 / PWM_FREQUENCY;
 //frequency of blink
 static const int BLINK_FREQUENCY = 2;
 //period of blink 
@@ -36,6 +37,12 @@ static const int BLINK_PERIOD = 1000000 / BLINK_FREQUENCY;
 //max pwm value (equal to 100%)
 static const int PWM_VALUE_MAX = 50; 
 
+
+static nrfx_pwm_t PWM_INSTANCE = NRFX_PWM_INSTANCE(0);
+
+
+
+    
 
 
 static void button_on_doubleclick_handler(void * user_data)
@@ -48,18 +55,53 @@ static void button_on_doubleclick_handler(void * user_data)
 }
 
 
+static void pwm_handler (nrfx_pwm_evt_type_t event_type)
+{
+   application_lock(&app);
+
+   app.duty_cycle_values.channel_0 = estc_blinky_machine_get_led_pwm(&app.blinky_machine, 0);
+   app.duty_cycle_values.channel_1 = estc_blinky_machine_get_led_pwm(&app.blinky_machine, 1);
+   app.duty_cycle_values.channel_2 = estc_blinky_machine_get_led_pwm(&app.blinky_machine, 2);
+   app.duty_cycle_values.channel_3 = estc_blinky_machine_get_led_pwm(&app.blinky_machine, 3);
+
+   application_unlock(&app);
+
+}
 
 void application_init(Application * app)
 {
+    memset(app, 0, sizeof(Application));
     estc_button_init(&app->button, button_on_doubleclick_handler, NULL, app);
     estc_blinky_machine_init(&app->blinky_machine, ESTC_BLINK_SEQUENCE, SEQUENCE_SIZE, BLINK_PERIOD, PWM_VALUE_MAX);
 
     
-    for (int i = 0; i < ESTC_LEDS_NUMBER; i++)
-    {
-        estc_pwm_init(&app->pwm_leds[i], ESTC_LEDS_PINS[i], true, PWM_PERIOD, PWM_VALUE_MAX);
 
-    }    
+
+    app->sequence.values.p_individual = &app->duty_cycle_values;
+    app->sequence.length              = NRF_PWM_VALUES_LENGTH(app->duty_cycle_values);
+    app->sequence.repeats             = 0;
+    app->sequence.end_delay           = 0;
+
+        nrfx_err_t err;
+
+        nrfx_pwm_config_t config = NRFX_PWM_DEFAULT_CONFIG;
+        config.output_pins[0] = ESTC_LEDS_PINS[0];
+        config.output_pins[1] = ESTC_LEDS_PINS[1];
+        config.output_pins[2] = ESTC_LEDS_PINS[2];
+        config.output_pins[3] = ESTC_LEDS_PINS[3];
+        config.load_mode = NRF_PWM_LOAD_INDIVIDUAL ;
+        config.top_value = PWM_VALUE_MAX;
+
+
+        
+        err = nrfx_pwm_init( 
+            &PWM_INSTANCE, 
+            &config,
+            pwm_handler
+        );
+        APP_ERROR_CHECK(err);
+        nrfx_pwm_simple_playback ( &PWM_INSTANCE, &app->sequence, 1, NRFX_PWM_FLAG_LOOP );
+    
 }
 
 void application_next_tick(Application * app)
@@ -67,18 +109,10 @@ void application_next_tick(Application * app)
     if (app->smooth_blinking)
     {
         estc_blinky_machine_next_state(&app->blinky_machine);
-        for (int i = 0; i < ESTC_LEDS_NUMBER; i++)
-        {
-            uint32_t new_led_pwm = estc_blinky_machine_get_led_pwm(&app->blinky_machine, i);
-            estc_pwm_set_value(&app->pwm_leds[i], new_led_pwm);
-        }
+
 
     }        
    
-    for (int i = 0; i < ESTC_LEDS_NUMBER; i++)
-    {
-       estc_pwm_handle(&app->pwm_leds[i]);
-    }
 }
 
 void application_lock(Application * app)

@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <boards.h>
 #include <app_timer.h>
+#include <nrfx_pwm.h>
 
 #include "estc_pwm.h"
 #include "estc_blinky_machine.h"
@@ -23,8 +24,12 @@ typedef struct _Application
 {
     ESTCButton button;
     ESTCBlinkyMachine blinky_machine;
-    ESTCPWM pwm_leds[ESTC_LEDS_NUMBER];
     bool smooth_blinking;
+
+    //Duty cycle values for a sequence loaded in NRF_PWM_LOAD_INDIVIDUAL
+    nrf_pwm_values_individual_t duty_cycle_values;
+    //structure for defining a sequence of PWM duty cycles
+    nrf_pwm_sequence_t sequence;
 
 } Application;
 

@@ -36,7 +36,7 @@ void estc_monotonic_time_set(ESTCTimeStamp time)
 static void rtc_monotonic_time_handler(void * p_context)
 {
     estc_monotonic_time_update(1);
-    NRF_LOG_INFO("Timer 2 %u", estc_monotonic_time_get());
+   
 }
 
 
