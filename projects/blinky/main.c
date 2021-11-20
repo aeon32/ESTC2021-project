@@ -17,6 +17,7 @@
 #include "estc_pwm.h"
 #include "estc_blinky_machine.h"
 #include "estc_button.h"
+#include "estc_monotonic_time.h"
 
 
 //total leds number
@@ -59,7 +60,12 @@ static const int BLINK_PERIOD = 1000000 / BLINK_FREQUENCY;
 //max pwm value (equal to 100%)
 static const int PWM_VALUE_MAX = 50; 
 
+//rtc timer period in us, approximately
+//We choose this value trying to minimize rounding error of RTC_FREQUENCY_DIVIDER calculation.
+static const int RTC_PERIOD = 5188;
 
+//clock divider == APP_TIMER_CLOCK_FREQ / ( 1000000 usec / RTC_PERIOD usec);
+static const int RTC_FREQUENCY_DIVIDER =  RTC_PERIOD*APP_TIMER_CLOCK_FREQ/1000000; 
 
 void configure_gpio()
 {
@@ -136,20 +142,25 @@ void gpiote_init()
 
 void rtc_handler (void *p_context)
 {
-   NRF_LOG_INFO("Timer");
-   led_toggle(0);
+   
+    estc_monotonic_time_update(RTC_PERIOD);  
+    NRF_LOG_INFO("Timer %u", estc_monotonic_time_get() );
+
+    led_toggle(0);
 }
+
+
 
 void rtc_init()
 {
-
     ret_code_t err  = app_timer_init();
     APP_ERROR_CHECK(err);
 
     APP_TIMER_DEF(default_timer_id);
 
-    err = app_timer_create(&default_timer_id, APP_TIMER_MODE_REPEATED, rtc_handler  );
-    err = app_timer_start(default_timer_id, APP_TIMER_CLOCK_FREQ, NULL );
+    err = app_timer_create(&default_timer_id, APP_TIMER_MODE_REPEATED, rtc_handler );
+    err = app_timer_start(default_timer_id, RTC_FREQUENCY_DIVIDER, NULL );    
+
 }
 
 
@@ -160,8 +171,9 @@ int main()
     estc_button_init(&button);
     log_init();
     nrfx_systick_init();
+    
     rtc_init();
-
+ 
 
     NRF_LOG_INFO("Entering main loop");
     while (true)
