@@ -1,7 +1,7 @@
 #ifndef ESTC_BUTTON_H
 #define ESTC_BUTTON_H
 
-#include <nrfx_systick.h>
+#include "estc_monotonic_time.h"
 
 typedef enum 
 {
@@ -11,11 +11,19 @@ typedef enum
 
 } ESTC_BUTTON_DOUBLECLICK_STATE;
 
+
+
+typedef void (*ESTCButtonEventHandler) (void * user_data);
+
 typedef struct 
 {
 
     ESTC_BUTTON_DOUBLECLICK_STATE double_click;
-    nrfx_systick_state_t  first_click_time_stamp;
+    ESTCTimeStamp  first_click_time_stamp;
+
+    ESTCButtonEventHandler double_click_handler;
+    ESTCButtonEventHandler long_press_handler;
+    void * user_data;
  
 } ESTCButton;
 
@@ -27,7 +35,8 @@ typedef struct
  * Initialization
  * 
 **/ 
-void estc_button_init(ESTCButton * button);
+void estc_button_init(ESTCButton * button, ESTCButtonEventHandler double_click_handler, 
+                      ESTCButtonEventHandler long_press_handler, void * user_data);
 
 /**
  * Process button click.
@@ -35,10 +44,5 @@ void estc_button_init(ESTCButton * button);
 **/
 void estc_button_process_click(ESTCButton * button);
 
-/**
- * Will return true if button have been doubleclicked.
- * Clear doubleclicked flag
-**/
-bool estc_button_have_been_doubleclicked(ESTCButton * button);
 
 #endif

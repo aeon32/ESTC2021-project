@@ -111,18 +111,86 @@ void led_toggle (int led_number)
 
 }
 
+typedef struct _Application
+{
+    ESTCButton button;
+    ESTCBlinkyMachine blinky_machine;
+    ESTCPWM pwm_leds[ESTC_LEDS_NUMBER];
+    bool smooth_blinking;
 
-ESTCButton button;
+} Application;
+static Application app;
+
+
+void button_on_doubleclick_handler(void * user_data)
+{  
+    //C-style leg shooting )
+    Application * app = (Application *) user_data;
+    
+    app->smooth_blinking = !app->smooth_blinking;
+
+}
+
+
+
+void application_init(Application * app)
+{
+    estc_button_init(&app->button, button_on_doubleclick_handler, NULL, app);
+    estc_blinky_machine_init(&app->blinky_machine, ESTC_BLINK_SEQUENCE, SEQUENCE_SIZE, BLINK_PERIOD, PWM_VALUE_MAX);
+
+    
+    for (int i = 0; i < ESTC_LEDS_NUMBER; i++)
+    {
+        estc_pwm_init(&app->pwm_leds[i], ESTC_LEDS_PINS[i], true, PWM_PERIOD, PWM_VALUE_MAX);
+
+    }    
+}
+
+void application_next_tick(Application * app)
+{
+   //some kind of a critical section
+    if (app->smooth_blinking)
+    {
+        estc_blinky_machine_next_state(&app->blinky_machine);
+        for (int i = 0; i < ESTC_LEDS_NUMBER; i++)
+        {
+            uint32_t new_led_pwm = estc_blinky_machine_get_led_pwm(&app->blinky_machine, i);
+            estc_pwm_set_value(&app->pwm_leds[i], new_led_pwm);
+        }
+
+    }        
+   
+    for (int i = 0; i < ESTC_LEDS_NUMBER; i++)
+    {
+       estc_pwm_handle(&app->pwm_leds[i]);
+    }
+}
+
+void application_lock(Application * app)
+{
+    NRFX_CRITICAL_SECTION_ENTER();
+
+}
+
+void application_unlock(Application * app)
+{
+    NRFX_CRITICAL_SECTION_EXIT();
+
+}
 
 
 void button_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 {
 
-    estc_button_process_click(&button);
+    application_lock(&app);
+    estc_button_process_click(&app.button);
+    application_unlock(&app);
 
     NRF_LOG_INFO("Polarity %d", action);
 
 }
+
+
 
 
 void gpiote_init()
@@ -144,9 +212,7 @@ void rtc_handler (void *p_context)
 {
    
     estc_monotonic_time_update(RTC_PERIOD);  
-    NRF_LOG_INFO("Timer %u", estc_monotonic_time_get() );
 
-    led_toggle(0);
 }
 
 
@@ -165,80 +231,29 @@ void rtc_init()
 
 
 
-int main()
-{
-    configure_gpio();
-    estc_button_init(&button);
-    log_init();
-    nrfx_systick_init();
-    
-    rtc_init();
- 
-
-    NRF_LOG_INFO("Entering main loop");
-    while (true)
-    {
-     
-        LOG_BACKEND_USB_PROCESS();
-        NRF_LOG_PROCESS();
-
-    }
-
-
-}
-
-int main1(void)
+int main(void)
 {
 
     
     /* Configure board. */
-    configure_gpio();
-    estc_button_init(&button);
-    log_init();
     nrfx_systick_init();
+    application_init(&app);
+
+    configure_gpio();
+    log_init();
+    rtc_init();
     gpiote_init();
 
+    
 
-    ESTCBlinkyMachine blinky_machine;
-    estc_blinky_machine_init(&blinky_machine, ESTC_BLINK_SEQUENCE, SEQUENCE_SIZE, BLINK_PERIOD, PWM_VALUE_MAX);
-
-
-    ESTCPWM pwm_leds[ESTC_LEDS_NUMBER];
-    for (int i = 0; i < ESTC_LEDS_NUMBER; i++)
-    {
-        estc_pwm_init(&pwm_leds[i], ESTC_LEDS_PINS[i], true, PWM_PERIOD, PWM_VALUE_MAX);
-
-    }
-
-    bool smooth_blinking = false;
 
 
     NRF_LOG_INFO("Entering main loop");
     while (true)
     {
-        //some kind of a critical section
-        nrfx_gpiote_in_event_enable (ESTC_BUTTON_PIN, false);
-        
-        if (estc_button_have_been_doubleclicked(&button))
-            smooth_blinking = ! smooth_blinking;
-
-        nrfx_gpiote_in_event_enable (ESTC_BUTTON_PIN, true);
-
-        if (smooth_blinking)
-        {
-            estc_blinky_machine_next_state(&blinky_machine);
-            for (int i = 0; i < ESTC_LEDS_NUMBER; i++)
-            {
-                uint32_t new_led_pwm = estc_blinky_machine_get_led_pwm(&blinky_machine, i);
-                estc_pwm_set_value(&pwm_leds[i], new_led_pwm);
-            }
-
-        }        
-       
-        for (int i = 0; i < ESTC_LEDS_NUMBER; i++)
-        {
-           estc_pwm_handle(&pwm_leds[i]);
-        }
+        application_lock(&app);
+        application_next_tick(&app);
+        application_unlock(&app);
 
         LOG_BACKEND_USB_PROCESS();
         NRF_LOG_PROCESS();
