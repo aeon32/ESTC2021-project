@@ -30,6 +30,7 @@ C_SRCS := main.c \
   estc_blinky_machine.c\
   estc_monotonic_time.c\
   estc_button.c\
+  application.c\
   $(SDK_ROOT)/components/libraries/log/src/nrf_log_frontend.c \
   $(SDK_ROOT)/components/libraries/log/src/nrf_log_str_formatter.c \
   $(SDK_ROOT)/components/libraries/log/src/nrf_log_backend_usb.c \

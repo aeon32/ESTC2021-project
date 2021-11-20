@@ -20,56 +20,18 @@
 #include "estc_monotonic_time.h"
 
 
-//total leds number
-#define ESTC_LEDS_NUMBER 4
-
-
-
-//pin numbers for leds. Constants are defined in nRF52840 Dongle UserGuide
-static const uint8_t ESTC_LEDS_PINS[ESTC_LEDS_NUMBER] = 
-{
-    NRF_GPIO_PIN_MAP(0,6),
-    NRF_GPIO_PIN_MAP(0,8),
-    NRF_GPIO_PIN_MAP(1,9),
-    NRF_GPIO_PIN_MAP(0,12)
-};
-
-//pin numbers for button. Constants are defined in nRF52840 Dongle UserGuide
-static const uint8_t ESTC_BUTTON_PIN = NRF_GPIO_PIN_MAP(1,6);
-
-
-//we encode blinking sequence as array of led number (equal to (6, 5, 9, 9) - device id)
-static const uint32_t ESTC_BLINK_SEQUENCE[] = {
-    0, 0, 0, 0, 0, 0,
-    1, 1, 1, 1, 1,
-    2, 2, 2, 2, 2, 2, 2, 2, 2,
-    3, 3, 3, 3, 3, 3, 3, 3, 3 
-
-};
-
-static const size_t SEQUENCE_SIZE = sizeof(ESTC_BLINK_SEQUENCE)/sizeof(ESTC_BLINK_SEQUENCE[0]);
-
-//PWM FREQUENCY in herz
-static const int PWM_FREQUENCY = 1000;
-//PWM_PERIOD in usec
-static const int PWM_PERIOD = 1000000 / PWM_FREQUENCY;
-//frequency of blink
-static const int BLINK_FREQUENCY = 2;
-//period of blink 
-static const int BLINK_PERIOD = 1000000 / BLINK_FREQUENCY;
-//max pwm value (equal to 100%)
-static const int PWM_VALUE_MAX = 50; 
+#include "application.h"
 
 //rtc timer period in us, approximately
 //We choose this value trying to minimize rounding error of RTC_FREQUENCY_DIVIDER calculation.
 static const int RTC_PERIOD = 5188;
 
-//clock divider == APP_TIMER_CLOCK_FREQ / ( 1000000 usec / RTC_PERIOD usec);
-static const int RTC_FREQUENCY_DIVIDER =  RTC_PERIOD*APP_TIMER_CLOCK_FREQ/1000000; 
+//clock divider == ESTC_TIMER_CLOCK_FREQ / ( 1000000 usec / RTC_PERIOD usec);
+static const int RTC_FREQUENCY_DIVIDER =  RTC_PERIOD*APP_TIMER_CLOCK_FREQ/1000000;
+
 
 void configure_gpio()
 {
-
    for ( int i = 0; i < ESTC_LEDS_NUMBER; i++)
    {
        int pin_number = ESTC_LEDS_PINS [i];
@@ -85,7 +47,6 @@ void configure_gpio()
    //              NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_S0S1, NRF_GPIO_PIN_NOSENSE);   
 
 }
-
 
 bool button_is_pressed()
 {
@@ -111,72 +72,6 @@ void led_toggle (int led_number)
 
 }
 
-typedef struct _Application
-{
-    ESTCButton button;
-    ESTCBlinkyMachine blinky_machine;
-    ESTCPWM pwm_leds[ESTC_LEDS_NUMBER];
-    bool smooth_blinking;
-
-} Application;
-static Application app;
-
-
-void button_on_doubleclick_handler(void * user_data)
-{  
-    //C-style leg shooting )
-    Application * app = (Application *) user_data;
-    
-    app->smooth_blinking = !app->smooth_blinking;
-
-}
-
-
-
-void application_init(Application * app)
-{
-    estc_button_init(&app->button, button_on_doubleclick_handler, NULL, app);
-    estc_blinky_machine_init(&app->blinky_machine, ESTC_BLINK_SEQUENCE, SEQUENCE_SIZE, BLINK_PERIOD, PWM_VALUE_MAX);
-
-    
-    for (int i = 0; i < ESTC_LEDS_NUMBER; i++)
-    {
-        estc_pwm_init(&app->pwm_leds[i], ESTC_LEDS_PINS[i], true, PWM_PERIOD, PWM_VALUE_MAX);
-
-    }    
-}
-
-void application_next_tick(Application * app)
-{
-   //some kind of a critical section
-    if (app->smooth_blinking)
-    {
-        estc_blinky_machine_next_state(&app->blinky_machine);
-        for (int i = 0; i < ESTC_LEDS_NUMBER; i++)
-        {
-            uint32_t new_led_pwm = estc_blinky_machine_get_led_pwm(&app->blinky_machine, i);
-            estc_pwm_set_value(&app->pwm_leds[i], new_led_pwm);
-        }
-
-    }        
-   
-    for (int i = 0; i < ESTC_LEDS_NUMBER; i++)
-    {
-       estc_pwm_handle(&app->pwm_leds[i]);
-    }
-}
-
-void application_lock(Application * app)
-{
-    NRFX_CRITICAL_SECTION_ENTER();
-
-}
-
-void application_unlock(Application * app)
-{
-    NRFX_CRITICAL_SECTION_EXIT();
-
-}
 
 
 void button_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
