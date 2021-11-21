@@ -4,6 +4,8 @@
 #include "estc_monotonic_time.h"
 
 #define HSV_MACHINE_LEDS 4
+#define HSV_COMPONENTS 3
+
 typedef enum _ESTCHSVMachineMode
 {
    ESTCHSV_NO_INPUT = 0,
@@ -27,6 +29,10 @@ typedef struct
 
     uint32_t pwm_max_value;
     uint32_t pwm_values[HSV_MACHINE_LEDS];
+
+
+    int hsv_components[HSV_COMPONENTS];
+
  
 } ESTCHSVMachine;
 
