@@ -78,10 +78,15 @@ void button_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 {
 
     application_lock(&app);
-    estc_button_process_press(&app.button);
-    application_unlock(&app);
+    if (button_is_pressed())
+    {
+       application_process_press(&app);
+    } else {
+       application_process_release(&app);
+    }
 
-    NRF_LOG_INFO("Polarity %d", action);
+    
+    application_unlock(&app);
 
 }
 
@@ -93,7 +98,7 @@ void gpiote_init()
     nrfx_err_t err = nrfx_gpiote_init();
     APP_ERROR_CHECK(err);
 
-    nrfx_gpiote_in_config_t in_config = NRFX_GPIOTE_CONFIG_IN_SENSE_HITOLO(true);
+    nrfx_gpiote_in_config_t in_config = NRFX_GPIOTE_CONFIG_IN_SENSE_TOGGLE(true);
     in_config.pull = NRF_GPIO_PIN_PULLUP;
 
     err = nrfx_gpiote_in_init(ESTC_BUTTON_PIN, &in_config, button_handler);
@@ -129,7 +134,7 @@ void rtc_init()
 
 
 
-int main1(void)
+int main(void)
 {
 
     
@@ -201,7 +206,7 @@ static void mybutton_on_longpress_handler(void * user_data)
 }
 
 
-int main()
+int main1()
 {
 
     configure_gpio();

@@ -106,12 +106,12 @@ void application_init(Application * app)
 
 void application_next_tick(Application * app)
 {
+    estc_button_process_update(&app->button);
     if (app->smooth_blinking)
     {
         estc_blinky_machine_next_state(&app->blinky_machine);
 
-
-    }        
+    }
    
 }
 
@@ -127,9 +127,15 @@ void application_unlock(Application * app)
 
 }
 
-void application_process_click(Application * app)
+void application_process_press(Application * app)
 {
-   estc_button_process_click(&app->button);
+   estc_button_process_press(&app->button);
+}
+
+
+void application_process_release(Application * app)
+{
+   estc_button_process_release(&app->button);
 }
 
 Application app;

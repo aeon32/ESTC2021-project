@@ -85,16 +85,22 @@ void estc_button_process_update(ESTCButton * button)
 
             } 
         } else 
+        {
+           NRF_LOG_INFO("Switch to Waiting for second click");
            button->double_click = ESTC_BUTTON_WAITING_FOR_SECOND_CLICK;
+        }
 
     } else if (button->double_click == ESTC_BUTTON_WAITING_FOR_SECOND_CLICK)
     {
-        NRF_LOG_INFO("Waiting for second click");
+        
         if (button->filtered_pressed)
         {
             if (button->double_click_handler)
                 button->double_click_handler(button->user_data);
-        } else if (released_time >= ESTC_BUTTON_DOUBLECLICK_TIMEOUT) {
+            NRF_LOG_INFO("Double clicked");
+            button->double_click = ESTC_BUTTON_SECOND_CLICK;
+        } else if (released_time >= ESTC_BUTTON_DOUBLECLICK_TIMEOUT)
+        {
             NRF_LOG_INFO("Switch to released state");
             button->double_click = ESTC_BUTTON_RELEASED_STATE;
         }
@@ -111,6 +117,14 @@ void estc_button_process_update(ESTCButton * button)
             NRF_LOG_INFO("Switch to released state");
             button->double_click = ESTC_BUTTON_RELEASED_STATE;
         }
+    } else if (button->double_click == ESTC_BUTTON_SECOND_CLICK)
+    {
+        if (!button->filtered_pressed)
+        {
+           NRF_LOG_INFO("Switch to released state");
+           button->double_click = ESTC_BUTTON_RELEASED_STATE;   
+        }
+
     }
     
 }

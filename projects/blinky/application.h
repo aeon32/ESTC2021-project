@@ -51,7 +51,8 @@ void application_next_tick(Application * app);
 /**
  * 
 **/
-void application_process_click(Application * app);
+void application_process_press(Application * app);
+void application_process_release(Application * app);
 
 /**
  *  Critical section for Application instance

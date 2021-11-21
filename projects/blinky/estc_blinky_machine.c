@@ -4,7 +4,7 @@
 #include <nrf_log.h>
 
 /**
- * Initialize PWM for pin. Pin must be configured for output.
+ * 
  * 
 **/ 
 void estc_blinky_machine_init(ESTCBlinkyMachine * blinky_machine, const uint32_t * sequence_table, 
@@ -23,13 +23,11 @@ void estc_blinky_machine_init(ESTCBlinkyMachine * blinky_machine, const uint32_t
 
 
 /**
- * Set new PWM value
+ * Set new state
  * 
 **/ 
 void estc_blinky_machine_next_state(ESTCBlinkyMachine * blinky_machine)
 {
-
-    uint32_t current_led = blinky_machine->sequence_table[blinky_machine->sequence_step];
 
 
     if (nrfx_systick_test(&blinky_machine->current_pwm_value_start_timestamp, blinky_machine->blink_period / blinky_machine->pwm_max_value/ 2))
@@ -44,7 +42,7 @@ void estc_blinky_machine_next_state(ESTCBlinkyMachine * blinky_machine)
                 blinky_machine->brightness_increasing = false;
             } else {
                 blinky_machine->pwm_value++;
-                NRF_LOG_INFO("PWM_VALUE %d", blinky_machine->pwm_value);
+
 
             }
 
@@ -55,7 +53,6 @@ void estc_blinky_machine_next_state(ESTCBlinkyMachine * blinky_machine)
             if (blinky_machine->pwm_value == 0)
             {
                 //led have done his working cycle, go to the next
-                NRF_LOG_INFO("Led %d toggled", current_led);
                 blinky_machine->sequence_step++;
                 if (blinky_machine->sequence_step == blinky_machine->sequence_table_size)
                 {
@@ -66,7 +63,6 @@ void estc_blinky_machine_next_state(ESTCBlinkyMachine * blinky_machine)
 
             } else {
                blinky_machine->pwm_value--;
-               NRF_LOG_INFO("PWM_VALUE %d", blinky_machine->pwm_value);
 
             }
 
