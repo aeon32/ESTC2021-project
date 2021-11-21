@@ -78,7 +78,7 @@ void button_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 {
 
     application_lock(&app);
-    estc_button_process_click(&app.button);
+    estc_button_process_press(&app.button);
     application_unlock(&app);
 
     NRF_LOG_INFO("Polarity %d", action);
@@ -107,6 +107,9 @@ void rtc_handler (void *p_context)
 {
    
     estc_monotonic_time_update(RTC_PERIOD);  
+    application_lock(&app);
+    application_next_tick(&app);
+    application_unlock(&app);    
 
 }
 
@@ -126,7 +129,7 @@ void rtc_init()
 
 
 
-int main(void)
+int main1(void)
 {
 
     
@@ -139,22 +142,112 @@ int main(void)
     rtc_init();
     gpiote_init();
 
-    
-
-
 
     NRF_LOG_INFO("Entering main loop");
     while (true)
     {
-        application_lock(&app);
-        application_next_tick(&app);
-        application_unlock(&app);
+
 
         LOG_BACKEND_USB_PROCESS();
         NRF_LOG_PROCESS();
 
     }
 }
+
+
+
+
+ESTCButton myButton;
+
+void myrtc_handler()
+{
+   
+  estc_monotonic_time_update(RTC_PERIOD);  
+  NRFX_CRITICAL_SECTION_ENTER();
+  estc_button_process_update(&myButton);
+
+  NRFX_CRITICAL_SECTION_EXIT();
+
+}
+
+
+void mybutton_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
+{
+
+    NRFX_CRITICAL_SECTION_ENTER();
+    if (button_is_pressed())
+    {
+        estc_button_process_press(&myButton);
+    } else {
+        estc_button_process_release(&myButton);
+    }
+    NRFX_CRITICAL_SECTION_EXIT();
+  
+}
+
+
+static void mybutton_on_doubleclick_handler(void * user_data)
+{  
+
+    led_toggle(0);
+
+}
+
+static void mybutton_on_longpress_handler(void * user_data)
+{  
+
+    NRF_LOG_INFO("Long press");
+
+}
+
+
+int main()
+{
+
+    configure_gpio();
+    log_init();
+
+    estc_button_init(&myButton, mybutton_on_doubleclick_handler, mybutton_on_longpress_handler, &myButton );
+
+
+    ret_code_t err  = app_timer_init();
+    APP_ERROR_CHECK(err);
+
+    APP_TIMER_DEF(default_timer_id);
+
+    err = app_timer_create(&default_timer_id, APP_TIMER_MODE_REPEATED, myrtc_handler );
+    err = app_timer_start(default_timer_id, RTC_FREQUENCY_DIVIDER, NULL );   
+
+
+
+    err = nrfx_gpiote_init();
+    APP_ERROR_CHECK(err);
+
+    nrfx_gpiote_in_config_t in_config = NRFX_GPIOTE_CONFIG_IN_SENSE_TOGGLE(true);
+    in_config.pull = NRF_GPIO_PIN_PULLUP;
+
+    err = nrfx_gpiote_in_init(ESTC_BUTTON_PIN, &in_config, mybutton_handler);
+    APP_ERROR_CHECK(err);
+
+    nrfx_gpiote_in_event_enable (ESTC_BUTTON_PIN, true); 
+
+
+
+
+    
+    NRF_LOG_INFO("Entering main loop");
+    while (true)
+    {
+
+
+        LOG_BACKEND_USB_PROCESS();
+        NRF_LOG_PROCESS();
+
+    }
+
+
+}
+
 
 /**
  *@}

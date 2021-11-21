@@ -34,6 +34,11 @@ void estc_monotonic_time_set(ESTCTimeStamp time);
 
 
 /**
+ * Difference between timestamps
+**/
+uint32_t estc_monotonic_time_diff(ESTCTimeStamp start_time, ESTCTimeStamp end_time );
+
+/**
  * Initialize and start update timer, based on RTC
  * RTC must be enabled sdk_config.h
 **/

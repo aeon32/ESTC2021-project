@@ -33,6 +33,12 @@ void estc_monotonic_time_set(ESTCTimeStamp time)
 }
 
 
+uint32_t estc_monotonic_time_diff(ESTCTimeStamp start_time, ESTCTimeStamp end_time )
+{
+	return end_time - start_time;
+}
+
+
 static void rtc_monotonic_time_handler(void * p_context)
 {
     estc_monotonic_time_update(1);
