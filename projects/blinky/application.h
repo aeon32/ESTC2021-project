@@ -8,7 +8,7 @@
 #include <nrfx_pwm.h>
 
 #include "estc_pwm.h"
-#include "estc_blinky_machine.h"
+#include "estc_hsv_machine.h"
 #include "estc_button.h"
 #include "estc_monotonic_time.h"
 
@@ -23,8 +23,7 @@ extern const uint8_t ESTC_BUTTON_PIN;
 typedef struct _Application
 {
     ESTCButton button;
-    ESTCBlinkyMachine blinky_machine;
-    bool smooth_blinking;
+    ESTCHSVMachine hsv_machine;
 
     //Duty cycle values for a sequence loaded in NRF_PWM_LOAD_INDIVIDUAL
     nrf_pwm_values_individual_t duty_cycle_values;

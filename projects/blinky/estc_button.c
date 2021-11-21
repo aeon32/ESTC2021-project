@@ -22,14 +22,12 @@ void estc_button_init(ESTCButton * button, ESTCButtonEventHandler double_click_h
 
 void estc_button_process_press(ESTCButton * button)
 {
-    NRF_LOG_INFO("Click");
     ESTCTimeStamp current_time = estc_monotonic_time_get();
     button->pressed_time_stamp = current_time;        
     
     button->pressed = true;
     if (!button->filtered_pressed)
     {
-       NRF_LOG_INFO("Filtered Click");
        button->filtered_pressed_time_stamp = current_time;
        button->filtered_pressed = true;        
     }
@@ -71,12 +69,10 @@ void estc_button_process_update(ESTCButton * button)
         }
     } else if (button->double_click == ESTC_BUTTON_FIRST_CLICK) 
     {
-        NRF_LOG_INFO("First click");
         if (button->filtered_pressed)
         {
             if (filtered_pressed_time >= ESTC_BUTTON_PRESS_TIMEOUT)
             {
-                NRF_LOG_INFO("Switch to long press state");
                 button->double_click =  ESTC_BUTTON_LONG_PRESS;
                 if (button->long_press_handler)
                 {
@@ -86,7 +82,6 @@ void estc_button_process_update(ESTCButton * button)
             } 
         } else 
         {
-           NRF_LOG_INFO("Switch to Waiting for second click");
            button->double_click = ESTC_BUTTON_WAITING_FOR_SECOND_CLICK;
         }
 
@@ -97,11 +92,10 @@ void estc_button_process_update(ESTCButton * button)
         {
             if (button->double_click_handler)
                 button->double_click_handler(button->user_data);
-            NRF_LOG_INFO("Double clicked");
             button->double_click = ESTC_BUTTON_SECOND_CLICK;
         } else if (released_time >= ESTC_BUTTON_DOUBLECLICK_TIMEOUT)
         {
-            NRF_LOG_INFO("Switch to released state");
+
             button->double_click = ESTC_BUTTON_RELEASED_STATE;
         }
 
@@ -114,14 +108,13 @@ void estc_button_process_update(ESTCButton * button)
                     button->long_press_handler(button->user_data);
                 }
         } else {
-            NRF_LOG_INFO("Switch to released state");
+
             button->double_click = ESTC_BUTTON_RELEASED_STATE;
         }
     } else if (button->double_click == ESTC_BUTTON_SECOND_CLICK)
     {
         if (!button->filtered_pressed)
         {
-           NRF_LOG_INFO("Switch to released state");
            button->double_click = ESTC_BUTTON_RELEASED_STATE;   
         }
 

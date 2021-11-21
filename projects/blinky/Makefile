@@ -26,8 +26,7 @@ LDFLAGS +=  -L$(SDK_ROOT)/modules/nrfx/mdk  -T$(LINKER_SCRIPT)
 
 #Sources and other dependencies
 C_SRCS := main.c \
-  estc_pwm.c \
-  estc_blinky_machine.c\
+  estc_hsv_machine.c\
   estc_monotonic_time.c\
   estc_button.c\
   application.c\
