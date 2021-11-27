@@ -25,18 +25,17 @@ ESTCTimeStamp estc_monotonic_time_get();
 /**
  *  Test if period usec is over since start_time timestamp
 **/
-bool estc_monotonic_time_elapsed_test(ESTCTimeStamp start_time, uint32_t interval );
+bool estc_monotonic_time_elapsed_test(ESTCTimeStamp start_time, uint32_t interval);
 
 /**
  *  Set uptime value
 **/
 void estc_monotonic_time_set(ESTCTimeStamp time);
 
-
 /**
  * Difference between timestamps
 **/
-uint32_t estc_monotonic_time_diff(ESTCTimeStamp start_time, ESTCTimeStamp end_time );
+uint32_t estc_monotonic_time_diff(ESTCTimeStamp start_time, ESTCTimeStamp end_time);
 
 /**
  * Initialize and start update timer, based on RTC

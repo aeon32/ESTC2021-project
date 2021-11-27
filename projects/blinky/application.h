@@ -17,46 +17,44 @@
 
 //consts, defined in application.c
 extern const uint8_t ESTC_LEDS_PINS[ESTC_LEDS_NUMBER];
-extern const uint8_t ESTC_BUTTON_PIN;
 
+extern const uint8_t ESTC_BUTTON_PIN;
 
 typedef struct _Application
 {
-    ESTCButton button;
-    ESTCHSVMachine hsv_machine;
+	ESTCButton button;
+	ESTCHSVMachine hsv_machine;
 
-    //Duty cycle values for a sequence loaded in NRF_PWM_LOAD_INDIVIDUAL
-    nrf_pwm_values_individual_t duty_cycle_values;
-    //structure for defining a sequence of PWM duty cycles
-    nrf_pwm_sequence_t sequence;
+	//Duty cycle values for a sequence loaded in NRF_PWM_LOAD_INDIVIDUAL
+	nrf_pwm_values_individual_t duty_cycle_values;
+	//structure for defining a sequence of PWM duty cycles
+	nrf_pwm_sequence_t sequence;
 
 } Application;
 
 //defined in application.c
 extern Application app;
 
-
 /**
  *  Structure init
 **/
-void application_init(Application * app);
-
+void application_init(Application* app);
 
 /**
  *  Update scene, according to current intenal state
 **/
-void application_next_tick(Application * app);
+void application_next_tick(Application* app);
 
 /**
  * 
 **/
-void application_process_press(Application * app);
-void application_process_release(Application * app);
+void application_process_press(Application* app);
+void application_process_release(Application* app);
 
 /**
  *  Critical section for Application instance
 **/
-void application_lock(Application * app);
-void application_unlock(Application * app);
+void application_lock(Application* app);
+void application_unlock(Application* app);
 
 #endif
