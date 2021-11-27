@@ -5,14 +5,14 @@
 
 typedef struct
 {
-	nrfx_systick_state_t current_pwm_value_start_timestamp;
-	bool brightness_increasing;
-	uint32_t sequence_step;
-	uint32_t pwm_max_value;
-	uint32_t blink_period;
-	const uint32_t* sequence_table;
-	size_t sequence_table_size;
-	uint32_t pwm_value;
+    nrfx_systick_state_t current_pwm_value_start_timestamp;
+    bool brightness_increasing;
+    uint32_t sequence_step;
+    uint32_t pwm_max_value;
+    uint32_t blink_period;
+    const uint32_t* sequence_table;
+    size_t sequence_table_size;
+    uint32_t pwm_value;
 } ESTCBlinkyMachine;
 
 /**
@@ -21,7 +21,7 @@ typedef struct
 **/
 void
 estc_blinky_machine_init(ESTCBlinkyMachine* blinky_machine, const uint32_t* sequence_table, size_t sequence_table_size,
-		uint32_t blink_period, uint32_t pwm_max_value);
+        uint32_t blink_period, uint32_t pwm_max_value);
 
 /**
  * Set new PWM value

@@ -5,15 +5,15 @@
 
 typedef struct
 {
-	uint8_t pin;
-	nrfx_systick_state_t pwm_period_start_timestamp;
-	uint32_t pwm_period;
-	uint32_t pwm_max_value;
-	uint32_t pwm_value;
-	uint32_t pwm_new_value;
-	bool brightness_increasing;
-	bool inverse_pin;
-	bool pin_switched_on;
+    uint8_t pin;
+    nrfx_systick_state_t pwm_period_start_timestamp;
+    uint32_t pwm_period;
+    uint32_t pwm_max_value;
+    uint32_t pwm_value;
+    uint32_t pwm_new_value;
+    bool brightness_increasing;
+    bool inverse_pin;
+    bool pin_switched_on;
 
 } ESTCPWM;
 

@@ -5,11 +5,11 @@
 
 typedef enum
 {
-	ESTC_BUTTON_RELEASED_STATE,
-	ESTC_BUTTON_FIRST_CLICK,
-	ESTC_BUTTON_LONG_PRESS,
-	ESTC_BUTTON_WAITING_FOR_SECOND_CLICK,
-	ESTC_BUTTON_SECOND_CLICK
+    ESTC_BUTTON_RELEASED_STATE,
+    ESTC_BUTTON_FIRST_CLICK,
+    ESTC_BUTTON_LONG_PRESS,
+    ESTC_BUTTON_WAITING_FOR_SECOND_CLICK,
+    ESTC_BUTTON_SECOND_CLICK
 
 } ESTC_BUTTON_DOUBLECLICK_STATE;
 
@@ -17,18 +17,18 @@ typedef void (* ESTCButtonEventHandler)(void* user_data);
 
 typedef struct
 {
-	ESTC_BUTTON_DOUBLECLICK_STATE double_click;
+    ESTC_BUTTON_DOUBLECLICK_STATE double_click;
 
-	ESTCTimeStamp first_click_time_stamp;
-	ESTCTimeStamp pressed_time_stamp;
-	ESTCTimeStamp filtered_pressed_time_stamp;
-	ESTCTimeStamp released_time_stamp;
-	bool pressed;
-	bool filtered_pressed; //antibounced button pressed flag
+    ESTCTimeStamp first_click_time_stamp;
+    ESTCTimeStamp pressed_time_stamp;
+    ESTCTimeStamp filtered_pressed_time_stamp;
+    ESTCTimeStamp released_time_stamp;
+    bool pressed;
+    bool filtered_pressed; //antibounced button pressed flag
 
-	ESTCButtonEventHandler double_click_handler;
-	ESTCButtonEventHandler long_press_handler;
-	void* user_data;
+    ESTCButtonEventHandler double_click_handler;
+    ESTCButtonEventHandler long_press_handler;
+    void* user_data;
 
 } ESTCButton;
 
@@ -44,7 +44,7 @@ typedef struct
  * 
 **/
 void estc_button_init(ESTCButton* button, ESTCButtonEventHandler double_click_handler,
-		ESTCButtonEventHandler long_press_handler, void* user_data);
+        ESTCButtonEventHandler long_press_handler, void* user_data);
 
 /**
  * Process button press

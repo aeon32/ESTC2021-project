@@ -8,24 +8,24 @@
 
 typedef enum _ESTCHSVMachineMode
 {
-	ESTCHSV_NO_INPUT = 0,
-	ESTCHSV_HUE = 1,
-	ESTCHSV_SATURATION = 2,
-	ESTCHSV_BRIGHTNESS = 3
+    ESTCHSV_NO_INPUT = 0,
+    ESTCHSV_HUE = 1,
+    ESTCHSV_SATURATION = 2,
+    ESTCHSV_BRIGHTNESS = 3
 } ESTCHSVMachineMode;
 
 typedef struct
 {
-	ESTCTimeStamp mode_led_current_pwm_value_start_timestamp;
-	ESTCTimeStamp component_increasing_step_timestamp;
-	ESTCHSVMachineMode mode;
+    ESTCTimeStamp mode_led_current_pwm_value_start_timestamp;
+    ESTCTimeStamp component_increasing_step_timestamp;
+    ESTCHSVMachineMode mode;
 
-	bool mode_led_brightness_increasing;
-	uint32_t mode_led_blink_period;
+    bool mode_led_brightness_increasing;
+    uint32_t mode_led_blink_period;
 
-	uint32_t pwm_max_value;
-	uint32_t pwm_values[HSV_MACHINE_LEDS];
-	int hsv_components[HSV_COMPONENTS];
+    uint32_t pwm_max_value;
+    uint32_t pwm_values[HSV_MACHINE_LEDS];
+    int hsv_components[HSV_COMPONENTS];
 } ESTCHSVMachine;
 
 /**
