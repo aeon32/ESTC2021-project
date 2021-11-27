@@ -26,6 +26,7 @@ typedef struct
     uint32_t pwm_max_value;
     uint32_t pwm_values[HSV_MACHINE_LEDS];
     int hsv_components[HSV_COMPONENTS];
+    bool hsv_components_increasing[HSV_COMPONENTS];
 } ESTCHSVMachine;
 
 /**

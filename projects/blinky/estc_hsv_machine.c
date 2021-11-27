@@ -30,6 +30,10 @@ void estc_hsv_machine_init(ESTCHSVMachine* hsv_machine, uint32_t pwm_max_value)
     hsv_machine->mode_led_brightness_increasing = true;
     memset(&hsv_machine->pwm_values, 0, sizeof(hsv_machine->pwm_values));
     memset(&hsv_machine->hsv_components, 0, sizeof(hsv_machine->hsv_components));
+    for (int i = 0; i < HSV_COMPONENTS; i++)
+    {
+        hsv_machine->hsv_components_increasing[i] = true;
+    }
 }
 
 /**
@@ -173,25 +177,43 @@ void estc_hsv_machine_next_state(ESTCHSVMachine* hsv_machine)
 
 void estc_hsv_machine_increase_component(ESTCHSVMachine* hsv_machine)
 {
-    if (hsv_machine->mode > 0)
+    if (hsv_machine->mode == 0)
+        return;
+
+    uint32_t component_index = hsv_machine->mode - 1;
+    int * hsv_component = &hsv_machine->hsv_components[component_index];
+    bool * component_increasing = &hsv_machine->hsv_components_increasing[component_index];
+
+    ESTCTimeStamp current_time = estc_monotonic_time_get();
+    uint32_t time_elapsed = estc_monotonic_time_diff(hsv_machine->component_increasing_step_timestamp,
+            current_time);
+    if (time_elapsed >= COMPONENT_INCREASING_PERIOD / MAX_COMPONENT_VALUES[component_index])
     {
-        ESTCTimeStamp current_time = estc_monotonic_time_get();
-        uint32_t time_elapsed = estc_monotonic_time_diff(hsv_machine->component_increasing_step_timestamp,
-                current_time);
-        if (time_elapsed >= COMPONENT_INCREASING_PERIOD / MAX_COMPONENT_VALUES[hsv_machine->mode - 1])
+        hsv_machine->component_increasing_step_timestamp = current_time;
+        if (*component_increasing)
         {
-            hsv_machine->component_increasing_step_timestamp = current_time;
-            hsv_machine->hsv_components[hsv_machine->mode - 1]++;
-            if (hsv_machine->hsv_components[hsv_machine->mode - 1] > MAX_COMPONENT_VALUES[hsv_machine->mode - 1])
+            (*hsv_component)++;
+            if (*hsv_component == MAX_COMPONENT_VALUES[component_index])
             {
-                hsv_machine->hsv_components[hsv_machine->mode - 1] = 0;
+                *component_increasing = false;
             }
-            NRF_LOG_INFO("HSV %d %d %d", hsv_machine->hsv_components[0], hsv_machine->hsv_components[1],
-                    hsv_machine->hsv_components[2]);
-            estc_hsv_machine_calculate_rgb_values(hsv_machine);
+        } 
+        else 
+        {
+            (*hsv_component)--;
+            if (*hsv_component == 0 )
+            {
+                *component_increasing = true;
+            }            
+
 
         }
+        NRF_LOG_INFO("HSV %d %d %d", hsv_machine->hsv_components[0], hsv_machine->hsv_components[1],
+                hsv_machine->hsv_components[2]);
+        estc_hsv_machine_calculate_rgb_values(hsv_machine);
+
     }
+
 }
 
 uint32_t estc_hsv_machine_get_led_pwm(ESTCHSVMachine* hsv_machine, uint32_t led_number)
