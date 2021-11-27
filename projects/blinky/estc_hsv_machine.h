@@ -14,6 +14,8 @@ typedef enum _ESTCHSVMachineMode
     ESTCHSV_BRIGHTNESS = 3
 } ESTCHSVMachineMode;
 
+typedef void (*estc_hsv_machine_toggle_mode_handler) (ESTCHSVMachineMode new_mode, void * user_data);
+
 typedef struct
 {
     ESTCTimeStamp mode_led_current_pwm_value_start_timestamp;
@@ -27,13 +29,18 @@ typedef struct
     uint32_t pwm_values[HSV_MACHINE_LEDS];
     int hsv_components[HSV_COMPONENTS];
     bool hsv_components_increasing[HSV_COMPONENTS];
+    estc_hsv_machine_toggle_mode_handler toggle_mode_handler;
+    void * user_data;
 } ESTCHSVMachine;
 
+
+
 /**
- * Initialize PWM for pin. Pin must be configured for output.
- * sequence_table must exist during lifetime of blinky_machine
+ * Initialize hsv machine
+ * @param hsv_components - initial values of hsv_components
 **/
-void estc_hsv_machine_init(ESTCHSVMachine* hsv_machine, uint32_t pwm_max_value);
+void estc_hsv_machine_init(ESTCHSVMachine* hsv_machine, const int32_t * hsv_components, 
+    uint32_t pwm_max_value, estc_hsv_machine_toggle_mode_handler toggle_mode_handler, void * user_data);
 
 /**
  * Switch working mode

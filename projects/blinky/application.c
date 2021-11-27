@@ -51,11 +51,23 @@ static void pwm_handler(nrfx_pwm_evt_type_t event_type)
     application_unlock(&app);
 }
 
+static void hsv_machine_toggle_mode_handler(ESTCHSVMachineMode new_mode, void * user_data)
+{
+    //if (new_mode != ESTCHSV_NO_INPUT)
+    //    return;
+    Application * app = (Application *) user_data;
+    estc_storage_save_data(&app->storage);
+
+}
+
 void application_init(Application* app)
 {
     memset(app, 0, sizeof(Application));
+    int32_t hsv_components[HSV_COMPONENTS] = {0, 255, 255};
     estc_button_init(&app->button, button_on_doubleclick_handler, button_on_longpress_handler, app);
-    estc_hsv_machine_init(&app->hsv_machine, PWM_VALUE_MAX);
+    estc_hsv_machine_init(&app->hsv_machine, hsv_components, PWM_VALUE_MAX, 
+        hsv_machine_toggle_mode_handler, app );
+    estc_storage_init(&app->storage);
 
     app->sequence.values.p_individual = &app->duty_cycle_values;
     app->sequence.length = NRF_PWM_VALUES_LENGTH(app->duty_cycle_values);

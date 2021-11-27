@@ -20,7 +20,11 @@ static const int COMPONENT_INCREASING_PERIOD = 5000000;
 //max values in hsv model
 static int MAX_COMPONENT_VALUES[3] = { 255, 255, 255 };
 
-void estc_hsv_machine_init(ESTCHSVMachine* hsv_machine, uint32_t pwm_max_value)
+
+static void estc_hsv_machine_calculate_rgb_values(ESTCHSVMachine* hsv_machine);
+
+void estc_hsv_machine_init(ESTCHSVMachine* hsv_machine, const int32_t * hsv_components, 
+    uint32_t pwm_max_value, estc_hsv_machine_toggle_mode_handler toggle_mode_handler, void * user_data)
 {
     hsv_machine->mode_led_current_pwm_value_start_timestamp = estc_monotonic_time_get();
     hsv_machine->component_increasing_step_timestamp = hsv_machine->mode_led_current_pwm_value_start_timestamp;
@@ -28,12 +32,16 @@ void estc_hsv_machine_init(ESTCHSVMachine* hsv_machine, uint32_t pwm_max_value)
     hsv_machine->mode = ESTCHSV_NO_INPUT;
     hsv_machine->mode_led_blink_period = 0;
     hsv_machine->mode_led_brightness_increasing = true;
-    memset(&hsv_machine->pwm_values, 0, sizeof(hsv_machine->pwm_values));
-    memset(&hsv_machine->hsv_components, 0, sizeof(hsv_machine->hsv_components));
     for (int i = 0; i < HSV_COMPONENTS; i++)
     {
-        hsv_machine->hsv_components_increasing[i] = true;
+        hsv_machine->hsv_components[i] = hsv_components[i];
+        hsv_machine->hsv_components_increasing[i] = !(hsv_components[i] >= MAX_COMPONENT_VALUES[i]);
+        hsv_machine->pwm_values[i] = 0;
     }
+    estc_hsv_machine_calculate_rgb_values(hsv_machine);
+    hsv_machine->toggle_mode_handler = toggle_mode_handler;
+    hsv_machine->user_data = user_data;
+
 }
 
 /**
@@ -56,6 +64,10 @@ void estc_hsv_machine_switch_mode(ESTCHSVMachine* hsv_machine)
         break;
     case ESTCHSV_BRIGHTNESS:
         hsv_machine->mode = ESTCHSV_NO_INPUT;
+    }
+    if (hsv_machine->toggle_mode_handler)
+    {
+        hsv_machine->toggle_mode_handler(hsv_machine->mode, hsv_machine->user_data);
     }
 }
 
@@ -116,16 +128,16 @@ static void hsv_to_rgb(int* in_hsv_values, uint32_t* out_rgb_values)
 
     if (s == 0)
     {
-        out_rgb_values[0] = 0;
-        out_rgb_values[1] = 0;
-        out_rgb_values[2] = 0;
+        out_rgb_values[0] = v;
+        out_rgb_values[1] = v;
+        out_rgb_values[2] = v;
         return;
     }
     region = h / 43;
     remainder = (h - (region * 43)) * 6;
     p = (v * (255 - s)) >> 8;
     q = (v * (255 - ((s * remainder) >> 8))) >> 8;
-    t = (v * (255 - ((s * remainder * (255 - remainder)) >> 8))) >> 8;
+    t = (v * (255 - ((s *  (255 - remainder)) >> 8))) >> 8;
     switch (region)
     {
     case 0:
@@ -164,6 +176,10 @@ static void hsv_to_rgb(int* in_hsv_values, uint32_t* out_rgb_values)
 static void estc_hsv_machine_calculate_rgb_values(ESTCHSVMachine* hsv_machine)
 {
     hsv_to_rgb(&hsv_machine->hsv_components[0], &hsv_machine->pwm_values[1]);
+    for (int i = 0; i < HSV_COMPONENTS; i++)
+    {
+        hsv_machine->pwm_values[i + 1] = hsv_machine->pwm_values[i + 1] * hsv_machine->pwm_max_value / MAX_COMPONENT_VALUES[i];
+    }
 }
 
 /**
@@ -205,15 +221,11 @@ void estc_hsv_machine_increase_component(ESTCHSVMachine* hsv_machine)
             {
                 *component_increasing = true;
             }            
-
-
         }
         NRF_LOG_INFO("HSV %d %d %d", hsv_machine->hsv_components[0], hsv_machine->hsv_components[1],
                 hsv_machine->hsv_components[2]);
         estc_hsv_machine_calculate_rgb_values(hsv_machine);
-
     }
-
 }
 
 uint32_t estc_hsv_machine_get_led_pwm(ESTCHSVMachine* hsv_machine, uint32_t led_number)
