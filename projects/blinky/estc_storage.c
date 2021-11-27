@@ -6,27 +6,9 @@
 #define ESTC_NRF_DFU_APP_DATA_AREA_SIZE 0x3000
 #define ESTC_PAGE_SIZE 0x1000
 
-#pragma pack(push, 1)
-typedef struct _StorageRecordHDR
-{
-    uint8_t data_type : 3;
-    uint8_t data_size : 5; //size of data, in 32-bit words, not including header
-    uint8_t padding1;
-    uint8_t padding2;
-    uint8_t crc8;
-    uint8_t data[0];
-} StorageRecordHDR;
 
 
-struct aux 
-{
-    uint32_t first;
-    uint32_t second;
-};
-
-#pragma pack(pop) // disables the effect of #pragma pack from now on
-
-
+static const uint8_t CRC_START_VALUE = 0xFE;
 
 static const uint8_t crc8x_table[] = 
 {
@@ -65,61 +47,116 @@ uint8_t static crc8x_fast(uint8_t crc, void const *mem, size_t len)
 }
 
 
+static uint32_t align_to_uint32(uint32_t offset)
+{
+    return (offset % sizeof(uint32_t) ) == 0 ? offset : (offset / sizeof(uint32_t)) * sizeof(uint32_t);
+}
+
 
 /**
  * Test for data record.
  * Returns data header if correct data on given offset have been finded.
 **/
-static StorageRecordHDR * estc_storage_find_last_record(ESTCStorage * storage, uint32_t page, uint32_t offset)
+static StorageRecordHDR * estc_storage_test_record(ESTCStorage * storage, uint32_t page, uint32_t offset)
 {
     
-    NRF_LOG_INFO("Test offset %x enter", offset);
-    uint8_t buff[ sizeof(StorageRecordHDR) + ESTC_STORAGE_MAX_DATA_LEN ];  //buff enough to read
+    NRF_LOG_INFO("Test record offset %x enter", offset);
 
     StorageRecordHDR * record_candidate = 
        (StorageRecordHDR *) ( (uint8_t *)storage->flash_addr + page * ESTC_PAGE_SIZE + offset);
-    memcpy(&buff, record_candidate, sizeof(StorageRecordHDR) + record_candidate->data_size * sizeof(uint32_t));
 
-    NRF_LOG_INFO("After mmcpy");
-    crc8x_fast(0xFF, buff, 3);
-
-   /*
-    StorageRecordHDR * record_candidate = 
-       (StorageRecordHDR *) ( (uint8_t *)storage->flash_addr + page * ESTC_PAGE_SIZE + offset);
-    
     //data is not correct, record out of the page
-    if ((offset + sizeof(StorageRecordHDR) + record_candidate -> data_size * sizeof(uint32_t)) > ESTC_PAGE_SIZE  )
+    uint32_t data_size_in_bytes = record_candidate -> data_size;
+    //datasize in words
+    uint32_t aligned_data_size = align_to_uint32(data_size_in_bytes);
+    
+    if ((offset + sizeof(StorageRecordHDR) + aligned_data_size) > ESTC_PAGE_SIZE  )
         return NULL;
 
-    uint8_t crc_buff[ ESTC_STORAGE_MAX_DATA_LEN ];  //buff enough to read
-    uint8_t crc = 0xFF;
 
+    uint8_t crc = CRC_START_VALUE;    
+    crc = crc8x_fast(crc, record_candidate, 3); //crc of header, except of crc itself
+    crc = crc8x_fast(crc, (uint8_t *) record_candidate + sizeof(StorageRecordHDR), data_size_in_bytes );
 
-    memcpy(&crc_buff, record_candidate, sizeof(StorageRecordHDR) + record_candidate->data_size * sizeof(uint32_t));
-    NRF_LOG_INFO("memcpy", offset);
-
-
-    crc = crc8x_fast(crc, crc_buff, 3); //crc of header, except of crc itself
-    crc = crc8x_fast(crc, crc_buff + sizeof(StorageRecordHDR), record_candidate->data_size );
-
-    NRF_LOG_INFO("Test offset %x Crc %x", offset, crc);
-    */
-    return NULL;
+    return crc == record_candidate->crc8 ? record_candidate : NULL;
 }
+
+
+void estc_storage_find_last_record(ESTCStorage * storage)
+{
+    uint32_t current_page = 0;
+    uint32_t last_record_offset = 0;
+
+    StorageRecordHDR * hdr = 0;
+    while ( (hdr = estc_storage_test_record(storage, current_page, last_record_offset)) != NULL )
+    {
+        storage->last_record_offset = last_record_offset;
+        storage->last_record = hdr;
+
+        last_record_offset += sizeof(StorageRecordHDR) + align_to_uint32(hdr->data_size);
+    }
+    storage->freespace_offset = last_record_offset;
+    NRF_LOG_INFO("Record found at %u offset %u", (uint32_t) storage->last_record, storage->last_record_offset);  
+}
+
+   
 
 void estc_storage_init(ESTCStorage * storage)
 {
-    storage->flash_addr = (void *) (ESTC_BOOTLOADER_START_ADDR - ESTC_NRF_DFU_APP_DATA_AREA_SIZE );
+    storage->flash_addr = (uint8_t *) (ESTC_BOOTLOADER_START_ADDR - ESTC_NRF_DFU_APP_DATA_AREA_SIZE );
     storage->current_page = 0;
     storage->last_record_offset = 0;
     storage->last_record = NULL;
-    
+    storage->freespace_offset = 0;
+
+    //estc_storage_find_last_record(storage);
+   
 }
 
-void estc_storage_save_data(ESTCStorage * storage)
+void estc_storage_save_data(ESTCStorage * storage, uint8_t data_type, const void * data, uint8_t data_size)
 {
-    if (false)
-        estc_storage_find_last_record(storage, storage->current_page, storage->last_record_offset);
+   uint32_t necessary_space = sizeof(StorageRecordHDR) + align_to_uint32(data_size);
+   if (storage->freespace_offset + necessary_space > ESTC_PAGE_SIZE)
+   {
+        storage->freespace_offset = 0;
+        nrfx_nvmc_page_erase( (uint32_t)storage->flash_addr + storage->current_page * ESTC_PAGE_SIZE );
+   }
 
+   //buffer for operation
+   const uint32_t BUFF_SIZE_ALIGNED =  ((sizeof(StorageRecordHDR) + ESTC_STORAGE_MAX_DATA_SIZE) / sizeof(uint32_t) + 1 ) * sizeof(uint32_t);
+   uint8_t buff[BUFF_SIZE_ALIGNED];
+   uint32_t aligned_size = align_to_uint32(sizeof(StorageRecordHDR) + data_size);
+
+   StorageRecordHDR * header = (StorageRecordHDR *) &buff[0];
+   header->data_type = data_type;
+   header->data_size = data_size;
+
+   memcpy(buff + sizeof(StorageRecordHDR), data, data_size);
+
+   uint8_t crc = CRC_START_VALUE;    
+   crc = crc8x_fast(crc, header, 3); //crc of header, except of crc itself
+   crc = crc8x_fast(crc, buff + sizeof(StorageRecordHDR), data_size); //crc of header, except of crc itself
+   header->crc8 = crc;
+
+   uint8_t * last_record_addr = storage->flash_addr + storage->current_page + storage->freespace_offset;
+   nrfx_nvmc_bytes_write((uint32_t) last_record_addr, buff, aligned_size);
+
+   storage->last_record_offset = storage->freespace_offset;
+   storage->last_record = (StorageRecordHDR *) last_record_addr;
+   storage->freespace_offset += aligned_size;
+
+
+   NRF_LOG_INFO("Something writter at %x offset %u alignedsize %u freespace_offset %u", (uint32_t) storage->last_record, storage->last_record_offset, aligned_size, storage->freespace_offset);    
 }
 
+
+const StorageRecordHDR * estc_storage_get_last_record(ESTCStorage * storage)
+{
+    return storage->last_record;
+}
+
+
+const void * estc_storage_record_data(const StorageRecordHDR * record)
+{
+    return (uint8_t *) record + sizeof(StorageRecordHDR);
+}

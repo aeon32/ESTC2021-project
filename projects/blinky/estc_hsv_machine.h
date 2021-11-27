@@ -39,7 +39,7 @@ typedef struct
  * Initialize hsv machine
  * @param hsv_components - initial values of hsv_components
 **/
-void estc_hsv_machine_init(ESTCHSVMachine* hsv_machine, const int32_t * hsv_components, 
+void estc_hsv_machine_init(ESTCHSVMachine* hsv_machine, const int * hsv_components, 
     uint32_t pwm_max_value, estc_hsv_machine_toggle_mode_handler toggle_mode_handler, void * user_data);
 
 /**
@@ -56,11 +56,17 @@ void estc_hsv_machine_increase_component(ESTCHSVMachine* hsv_machine);
  * Set new PWM value
  * 
 **/
-void estc_hsv_machine_next_state(ESTCHSVMachine* blinky_machine);
+void estc_hsv_machine_next_state(ESTCHSVMachine* hsv_machine);
 
 /**
  * Return pwm value for led
 **/
-uint32_t estc_hsv_machine_get_led_pwm(ESTCHSVMachine* blinky_machine, uint32_t led_number);
+uint32_t estc_hsv_machine_get_led_pwm(ESTCHSVMachine* hsv_machine, uint32_t led_number);
+
+
+/**
+ * Return hsv values array
+**/
+const int * estc_hsv_machine_get_components(ESTCHSVMachine* blinky_machine);
 
 #endif

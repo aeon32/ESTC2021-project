@@ -23,7 +23,7 @@ static int MAX_COMPONENT_VALUES[3] = { 255, 255, 255 };
 
 static void estc_hsv_machine_calculate_rgb_values(ESTCHSVMachine* hsv_machine);
 
-void estc_hsv_machine_init(ESTCHSVMachine* hsv_machine, const int32_t * hsv_components, 
+void estc_hsv_machine_init(ESTCHSVMachine* hsv_machine, const int * hsv_components, 
     uint32_t pwm_max_value, estc_hsv_machine_toggle_mode_handler toggle_mode_handler, void * user_data)
 {
     hsv_machine->mode_led_current_pwm_value_start_timestamp = estc_monotonic_time_get();
@@ -232,4 +232,9 @@ uint32_t estc_hsv_machine_get_led_pwm(ESTCHSVMachine* hsv_machine, uint32_t led_
 {
     assert(led_number < HSV_MACHINE_LEDS);
     return hsv_machine->pwm_values[led_number];
+}
+
+const int * estc_hsv_machine_get_components(ESTCHSVMachine* hsv_machine)
+{
+    return hsv_machine->hsv_components;
 }

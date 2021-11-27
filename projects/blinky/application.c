@@ -2,6 +2,11 @@
 
 #include <nrf_log.h>
 
+enum STORAGE_DATA_TYPES
+{
+    STORAGE_HSV_VALUES = 0
+};
+
 //pin numbers for leds. Constants are defined in nRF52840 Dongle UserGuide
 const uint8_t ESTC_LEDS_PINS[ESTC_LEDS_NUMBER] =
 {
@@ -51,23 +56,53 @@ static void pwm_handler(nrfx_pwm_evt_type_t event_type)
     application_unlock(&app);
 }
 
+
+static bool application_load_hsv_from_flash(Application * app, int * hsv_components)
+{
+    estc_storage_find_last_record(&app->storage);
+    bool res = false;
+
+    const StorageRecordHDR * record = estc_storage_get_last_record(&app->storage);
+    if (record)
+    {
+        NRF_LOG_INFO("Last record at %x type %u data_size %u", (uint32_t) record , record->data_type, record->data_size);  
+        if (record->data_size == sizeof(int) * HSV_COMPONENTS)
+        {
+            const void * data = estc_storage_record_data(record);
+            memcpy(hsv_components, data, record->data_size);
+            res = true;
+            NRF_LOG_INFO("Components loaded %d %d %d", hsv_components[0], hsv_components[1], hsv_components[2])
+        }
+    }
+    return res;
+}
+
 static void hsv_machine_toggle_mode_handler(ESTCHSVMachineMode new_mode, void * user_data)
 {
-    //if (new_mode != ESTCHSV_NO_INPUT)
-    //    return;
+    if (new_mode != ESTCHSV_NO_INPUT)
+        return;
+    
     Application * app = (Application *) user_data;
-    estc_storage_save_data(&app->storage);
+    const int * hsv_values = estc_hsv_machine_get_components(&app->hsv_machine);
 
+    estc_storage_save_data(&app->storage, STORAGE_HSV_VALUES, hsv_values, sizeof(int) * HSV_COMPONENTS );
+    int hsv_components[HSV_COMPONENTS];
+    application_load_hsv_from_flash(app, hsv_components);
+    
 }
+
 
 void application_init(Application* app)
 {
     memset(app, 0, sizeof(Application));
-    int32_t hsv_components[HSV_COMPONENTS] = {0, 255, 255};
+    int hsv_components[HSV_COMPONENTS] = {0, 255, 255};
+    estc_storage_init(&app->storage);
+    application_load_hsv_from_flash(app, hsv_components);
+    
     estc_button_init(&app->button, button_on_doubleclick_handler, button_on_longpress_handler, app);
     estc_hsv_machine_init(&app->hsv_machine, hsv_components, PWM_VALUE_MAX, 
         hsv_machine_toggle_mode_handler, app );
-    estc_storage_init(&app->storage);
+    
 
     app->sequence.values.p_individual = &app->duty_cycle_values;
     app->sequence.length = NRF_PWM_VALUES_LENGTH(app->duty_cycle_values);
