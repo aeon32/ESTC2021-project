@@ -46,10 +46,12 @@ uint8_t static crc8x_fast(uint8_t crc, void const *mem, size_t len)
     return crc;
 }
 
-
-static uint32_t align_to_uint32(uint32_t offset)
+/**
+ * Get the nearest value what is not less than data_size and multiplies by 4 (uint32 boundaries)
+**/ 
+static uint32_t align_size_to_uint32(uint32_t data_size)
 {
-    return (offset % sizeof(uint32_t) ) == 0 ? offset : (offset / sizeof(uint32_t)) * sizeof(uint32_t);
+    return (data_size % sizeof(uint32_t) ) == 0 ? data_size : (data_size / sizeof(uint32_t)) * sizeof(uint32_t);
 }
 
 
@@ -59,20 +61,17 @@ static uint32_t align_to_uint32(uint32_t offset)
 **/
 static StorageRecordHDR * estc_storage_test_record(ESTCStorage * storage, uint32_t page, uint32_t offset)
 {
-    
     NRF_LOG_INFO("Test record offset %x enter", offset);
-
     StorageRecordHDR * record_candidate = 
        (StorageRecordHDR *) ( (uint8_t *)storage->flash_addr + page * ESTC_PAGE_SIZE + offset);
 
     //data is not correct, record out of the page
     uint32_t data_size_in_bytes = record_candidate -> data_size;
     //datasize in words
-    uint32_t aligned_data_size = align_to_uint32(data_size_in_bytes);
+    uint32_t aligned_data_size = align_size_to_uint32(data_size_in_bytes);
     
     if ((offset + sizeof(StorageRecordHDR) + aligned_data_size) > ESTC_PAGE_SIZE  )
         return NULL;
-
 
     uint8_t crc = CRC_START_VALUE;    
     crc = crc8x_fast(crc, record_candidate, 3); //crc of header, except of crc itself
@@ -93,7 +92,7 @@ void estc_storage_find_last_record(ESTCStorage * storage)
         storage->last_record_offset = last_record_offset;
         storage->last_record = hdr;
 
-        last_record_offset += sizeof(StorageRecordHDR) + align_to_uint32(hdr->data_size);
+        last_record_offset += sizeof(StorageRecordHDR) + align_size_to_uint32(hdr->data_size);
     }
     storage->freespace_offset = last_record_offset;
     NRF_LOG_INFO("Record found at %u offset %u", (uint32_t) storage->last_record, storage->last_record_offset);  
@@ -115,8 +114,8 @@ void estc_storage_init(ESTCStorage * storage)
 
 void estc_storage_save_data(ESTCStorage * storage, uint8_t data_type, const void * data, uint8_t data_size)
 {
-   uint32_t necessary_space = sizeof(StorageRecordHDR) + align_to_uint32(data_size);
-   if (storage->freespace_offset + necessary_space > ESTC_PAGE_SIZE)
+   uint32_t aligned_size = align_size_to_uint32(sizeof(StorageRecordHDR) + data_size);
+   if (storage->freespace_offset + aligned_size > ESTC_PAGE_SIZE)
    {
         storage->freespace_offset = 0;
         nrfx_nvmc_page_erase( (uint32_t)storage->flash_addr + storage->current_page * ESTC_PAGE_SIZE );
@@ -125,7 +124,7 @@ void estc_storage_save_data(ESTCStorage * storage, uint8_t data_type, const void
    //buffer for operation
    const uint32_t BUFF_SIZE_ALIGNED =  ((sizeof(StorageRecordHDR) + ESTC_STORAGE_MAX_DATA_SIZE) / sizeof(uint32_t) + 1 ) * sizeof(uint32_t);
    uint8_t buff[BUFF_SIZE_ALIGNED];
-   uint32_t aligned_size = align_to_uint32(sizeof(StorageRecordHDR) + data_size);
+  
 
    StorageRecordHDR * header = (StorageRecordHDR *) &buff[0];
    header->data_type = data_type;
@@ -134,7 +133,7 @@ void estc_storage_save_data(ESTCStorage * storage, uint8_t data_type, const void
    memcpy(buff + sizeof(StorageRecordHDR), data, data_size);
 
    uint8_t crc = CRC_START_VALUE;    
-   crc = crc8x_fast(crc, header, 3); //crc of header, except of crc itself
+   crc = crc8x_fast(crc, header, 3); //crc of header, except of crc field itself
    crc = crc8x_fast(crc, buff + sizeof(StorageRecordHDR), data_size); //crc of header, except of crc itself
    header->crc8 = crc;
 
@@ -146,7 +145,7 @@ void estc_storage_save_data(ESTCStorage * storage, uint8_t data_type, const void
    storage->freespace_offset += aligned_size;
 
 
-   NRF_LOG_INFO("Something writter at %x offset %u alignedsize %u freespace_offset %u", (uint32_t) storage->last_record, storage->last_record_offset, aligned_size, storage->freespace_offset);    
+   NRF_LOG_INFO("Something written at %x offset %u alignedsize %u freespace_offset %u", (uint32_t) storage->last_record, storage->last_record_offset, aligned_size, storage->freespace_offset);    
 }
 
 

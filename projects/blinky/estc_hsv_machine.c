@@ -41,7 +41,6 @@ void estc_hsv_machine_init(ESTCHSVMachine* hsv_machine, const HSVColor * led_col
     estc_hsv_machine_calculate_rgb_values(hsv_machine);
     hsv_machine->toggle_mode_handler = toggle_mode_handler;
     hsv_machine->user_data = user_data;
-
 }
 
 /**
