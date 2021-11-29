@@ -57,7 +57,7 @@ static void pwm_handler(nrfx_pwm_evt_type_t event_type)
 }
 
 
-static bool application_load_hsv_from_flash(Application * app, int * hsv_components)
+static bool application_load_hsv_from_flash(Application * app, HSVColor * out_color)
 {
     estc_storage_find_last_record(&app->storage);
     bool res = false;
@@ -66,12 +66,12 @@ static bool application_load_hsv_from_flash(Application * app, int * hsv_compone
     if (record)
     {
         NRF_LOG_INFO("Last record at %x type %u data_size %u", (uint32_t) record , record->data_type, record->data_size);  
-        if (record->data_size == sizeof(int) * HSV_COMPONENTS)
+        if (record->data_size == sizeof(HSVColor))
         {
             const void * data = estc_storage_record_data(record);
-            memcpy(hsv_components, data, record->data_size);
+            memcpy(out_color, data, record->data_size);
             res = true;
-            NRF_LOG_INFO("Components loaded %d %d %d", hsv_components[0], hsv_components[1], hsv_components[2])
+            NRF_LOG_INFO("Components loaded %d %d %d", out_color->hsv.h, out_color->hsv.s, out_color->hsv.v);
         }
     }
     return res;
@@ -83,27 +83,25 @@ static void hsv_machine_toggle_mode_handler(ESTCHSVMachineMode new_mode, void * 
         return;
     
     Application * app = (Application *) user_data;
-    const int * hsv_values = estc_hsv_machine_get_components(&app->hsv_machine);
+    HSVColor led_color = estc_hsv_machine_get_components(&app->hsv_machine);
 
-    estc_storage_save_data(&app->storage, STORAGE_HSV_VALUES, hsv_values, sizeof(int) * HSV_COMPONENTS );
-    int hsv_components[HSV_COMPONENTS];
-    application_load_hsv_from_flash(app, hsv_components);
-    
+    estc_storage_save_data(&app->storage, STORAGE_HSV_VALUES, &led_color, sizeof(HSVColor) );
+    application_load_hsv_from_flash(app, &led_color);
 }
 
 
 void application_init(Application* app)
 {
     memset(app, 0, sizeof(Application));
-    int hsv_components[HSV_COMPONENTS] = {0, 255, 255};
+    HSVColor led_color = {.hsv_components = {0, 255, 255}};
+    
     estc_storage_init(&app->storage);
-    application_load_hsv_from_flash(app, hsv_components);
+    application_load_hsv_from_flash(app, &led_color);
     
     estc_button_init(&app->button, button_on_doubleclick_handler, button_on_longpress_handler, app);
-    estc_hsv_machine_init(&app->hsv_machine, hsv_components, PWM_VALUE_MAX, 
+    estc_hsv_machine_init(&app->hsv_machine, &led_color, PWM_VALUE_MAX, 
         hsv_machine_toggle_mode_handler, app );
     
-
     app->sequence.values.p_individual = &app->duty_cycle_values;
     app->sequence.length = NRF_PWM_VALUES_LENGTH(app->duty_cycle_values);
     app->sequence.repeats = 0;

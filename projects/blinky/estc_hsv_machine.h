@@ -16,6 +16,18 @@ typedef enum _ESTCHSVMachineMode
 
 typedef void (*estc_hsv_machine_toggle_mode_handler) (ESTCHSVMachineMode new_mode, void * user_data);
 
+
+typedef union 
+{
+    int32_t hsv_components[HSV_COMPONENTS];
+    struct {
+        int32_t h;
+        int32_t s;
+        int32_t v;
+    } hsv;
+} HSVColor;
+
+
 typedef struct
 {
     ESTCTimeStamp mode_led_current_pwm_value_start_timestamp;
@@ -27,7 +39,7 @@ typedef struct
 
     uint32_t pwm_max_value;
     uint32_t pwm_values[HSV_MACHINE_LEDS];
-    int hsv_components[HSV_COMPONENTS];
+    HSVColor led_color;
     bool hsv_components_increasing[HSV_COMPONENTS];
     estc_hsv_machine_toggle_mode_handler toggle_mode_handler;
     void * user_data;
@@ -39,7 +51,7 @@ typedef struct
  * Initialize hsv machine
  * @param hsv_components - initial values of hsv_components
 **/
-void estc_hsv_machine_init(ESTCHSVMachine* hsv_machine, const int * hsv_components, 
+void estc_hsv_machine_init(ESTCHSVMachine* hsv_machine, const HSVColor * led_color, 
     uint32_t pwm_max_value, estc_hsv_machine_toggle_mode_handler toggle_mode_handler, void * user_data);
 
 /**
@@ -67,6 +79,6 @@ uint32_t estc_hsv_machine_get_led_pwm(ESTCHSVMachine* hsv_machine, uint32_t led_
 /**
  * Return hsv values array
 **/
-const int * estc_hsv_machine_get_components(ESTCHSVMachine* blinky_machine);
+HSVColor estc_hsv_machine_get_components(ESTCHSVMachine* blinky_machine);
 
 #endif
