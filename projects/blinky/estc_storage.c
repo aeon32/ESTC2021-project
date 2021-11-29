@@ -99,7 +99,12 @@ void estc_storage_init(ESTCStorage * storage)
     storage->last_record_offset = 0;
     storage->last_record = NULL;
     storage->freespace_offset = 0;
-    //estc_storage_find_last_record(storage);
+    estc_storage_find_last_record(storage);
+    //storage is empty - we cannot suppose if storgage has been initialized, so erased it.
+    if (storage->last_record == NULL)
+    {
+        nrfx_nvmc_page_erase( (uint32_t)storage->flash_addr + storage->current_page * ESTC_PAGE_SIZE );
+    }    
 }
 
 void estc_storage_save_data(ESTCStorage * storage, uint8_t data_type, const void * data, uint8_t data_size)
