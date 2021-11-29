@@ -19,7 +19,6 @@ const uint8_t ESTC_LEDS_PINS[ESTC_LEDS_NUMBER] =
 //pin numbers for button. Constants are defined in nRF52840 Dongle UserGuide
 const uint8_t ESTC_BUTTON_PIN = NRF_GPIO_PIN_MAP(1, 6);
 
-
 //PWM FREQUENCY in herz
 //static const int PWM_FREQUENCY = 1000;
 //PWM_PERIOD in usec
@@ -56,7 +55,6 @@ static void pwm_handler(nrfx_pwm_evt_type_t event_type)
     application_unlock(&app);
 }
 
-
 static bool application_load_hsv_from_flash(Application * app, HSVColor * out_color)
 {
     estc_storage_find_last_record(&app->storage);
@@ -88,7 +86,6 @@ static void hsv_machine_toggle_mode_handler(ESTCHSVMachineMode new_mode, void * 
     estc_storage_save_data(&app->storage, STORAGE_HSV_VALUES, &led_color, sizeof(HSVColor) );
     application_load_hsv_from_flash(app, &led_color);
 }
-
 
 void application_init(Application* app)
 {

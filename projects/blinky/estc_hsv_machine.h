@@ -16,7 +16,6 @@ typedef enum _ESTCHSVMachineMode
 
 typedef void (*estc_hsv_machine_toggle_mode_handler) (ESTCHSVMachineMode new_mode, void * user_data);
 
-
 typedef union 
 {
     int32_t hsv_components[HSV_COMPONENTS];
@@ -26,7 +25,6 @@ typedef union
         int32_t v;
     } hsv;
 } HSVColor;
-
 
 typedef struct
 {
@@ -44,8 +42,6 @@ typedef struct
     estc_hsv_machine_toggle_mode_handler toggle_mode_handler;
     void * user_data;
 } ESTCHSVMachine;
-
-
 
 /**
  * Initialize hsv machine
@@ -74,7 +70,6 @@ void estc_hsv_machine_next_state(ESTCHSVMachine* hsv_machine);
  * Return pwm value for led
 **/
 uint32_t estc_hsv_machine_get_led_pwm(ESTCHSVMachine* hsv_machine, uint32_t led_number);
-
 
 /**
  * Return hsv values array

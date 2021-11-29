@@ -6,8 +6,6 @@
 #define ESTC_NRF_DFU_APP_DATA_AREA_SIZE 0x3000
 #define ESTC_PAGE_SIZE 0x1000
 
-
-
 static const uint8_t CRC_START_VALUE = 0xFE;
 
 static const uint8_t crc8x_table[] = 
@@ -34,7 +32,6 @@ static const uint8_t crc8x_table[] =
     0x15, 0x3b, 0x0a, 0x59, 0x68, 0xff, 0xce, 0x9d, 0xac
 };
 
-
 uint8_t static crc8x_fast(uint8_t crc, void const *mem, size_t len) 
 {
     uint8_t const *data = mem;
@@ -53,7 +50,6 @@ static uint32_t align_size_to_uint32(uint32_t data_size)
 {
     return (data_size % sizeof(uint32_t) ) == 0 ? data_size : (data_size / sizeof(uint32_t)) * sizeof(uint32_t);
 }
-
 
 /**
  * Test for data record.
@@ -80,12 +76,10 @@ static StorageRecordHDR * estc_storage_test_record(ESTCStorage * storage, uint32
     return crc == record_candidate->crc8 ? record_candidate : NULL;
 }
 
-
 void estc_storage_find_last_record(ESTCStorage * storage)
 {
     uint32_t current_page = 0;
     uint32_t last_record_offset = 0;
-
     StorageRecordHDR * hdr = 0;
     while ( (hdr = estc_storage_test_record(storage, current_page, last_record_offset)) != NULL )
     {
@@ -98,8 +92,6 @@ void estc_storage_find_last_record(ESTCStorage * storage)
     NRF_LOG_INFO("Record found at %u offset %u", (uint32_t) storage->last_record, storage->last_record_offset);  
 }
 
-   
-
 void estc_storage_init(ESTCStorage * storage)
 {
     storage->flash_addr = (uint8_t *) (ESTC_BOOTLOADER_START_ADDR - ESTC_NRF_DFU_APP_DATA_AREA_SIZE );
@@ -107,9 +99,7 @@ void estc_storage_init(ESTCStorage * storage)
     storage->last_record_offset = 0;
     storage->last_record = NULL;
     storage->freespace_offset = 0;
-
     //estc_storage_find_last_record(storage);
-   
 }
 
 void estc_storage_save_data(ESTCStorage * storage, uint8_t data_type, const void * data, uint8_t data_size)
@@ -124,8 +114,6 @@ void estc_storage_save_data(ESTCStorage * storage, uint8_t data_type, const void
    //buffer for operation
    const uint32_t BUFF_SIZE_ALIGNED =  ((sizeof(StorageRecordHDR) + ESTC_STORAGE_MAX_DATA_SIZE) / sizeof(uint32_t) + 1 ) * sizeof(uint32_t);
    uint8_t buff[BUFF_SIZE_ALIGNED];
-  
-
    StorageRecordHDR * header = (StorageRecordHDR *) &buff[0];
    header->data_type = data_type;
    header->data_size = data_size;
@@ -144,16 +132,13 @@ void estc_storage_save_data(ESTCStorage * storage, uint8_t data_type, const void
    storage->last_record = (StorageRecordHDR *) last_record_addr;
    storage->freespace_offset += aligned_size;
 
-
    NRF_LOG_INFO("Something written at %x offset %u alignedsize %u freespace_offset %u", (uint32_t) storage->last_record, storage->last_record_offset, aligned_size, storage->freespace_offset);    
 }
-
 
 const StorageRecordHDR * estc_storage_get_last_record(ESTCStorage * storage)
 {
     return storage->last_record;
 }
-
 
 const void * estc_storage_record_data(const StorageRecordHDR * record)
 {

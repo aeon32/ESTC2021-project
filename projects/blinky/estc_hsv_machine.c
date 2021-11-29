@@ -20,7 +20,6 @@ static const int COMPONENT_INCREASING_PERIOD = 5000000;
 //max values in hsv model
 static int MAX_COMPONENT_VALUES[3] = { 255, 255, 255 };
 
-
 static void estc_hsv_machine_calculate_rgb_values(ESTCHSVMachine* hsv_machine);
 
 void estc_hsv_machine_init(ESTCHSVMachine* hsv_machine, const HSVColor * led_color, 
@@ -114,7 +113,6 @@ static void estc_hsv_machine_calculate_mode_led_pwm(ESTCHSVMachine* hsv_machine,
             }
         }
     }
-
 }
 
 //Some stackoverflow magic )
