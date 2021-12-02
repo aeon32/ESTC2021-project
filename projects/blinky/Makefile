@@ -80,9 +80,10 @@ OBJS :=
 $(PROJECT_NAME): $(BINARY_PATH) $(HEX_PATH)
 
 
-
 $(foreach src_file,$(C_SRCS),\
    $(eval obj_file := $(OBJ_DIRECTORY)/$(notdir $(src_file).o) )\
+   $(eval depend_file := $(OBJ_DIRECTORY)/$(notdir $(src_file).d) )\
+   $(eval -include $(depend_file))\
    $(eval $(COMPILE_RULE) )\
    $(eval OBJS += $(obj_file) )\
 ) 
@@ -93,11 +94,8 @@ $(foreach src_file,$(ASM_SRCS),\
    $(eval OBJS += $(obj_file) )\
 ) 
 
-$(OUTPUT_DIRECTORY):
-	mkdir -p $(OUTPUT_DIRECTORY)
-	mkdir -p $(OBJ_DIRECTORY)
-
-$(BINARY_PATH): $(OUTPUT_DIRECTORY) $(OBJS)
+$(BINARY_PATH): $(OBJS)
+	@mkdir -p $(OUTPUT_DIRECTORY)
 	$(LD) $(LDFLAGS) -o $@ $(OBJS)
 
 $(HEX_PATH): $(BINARY_PATH)

@@ -118,10 +118,10 @@ LIB_FILES += -lc -lnosys -lm
 
 
 define COMPILE_RULE
-$(obj_file) : $(src_file)
-	$(CC) $(CFLAGS)  -o $(obj_file) -c $(src_file)
+$(obj_file) : Makefile $(src_file)
+	@mkdir -p $(OBJ_DIRECTORY)
+	$(CC) $(CFLAGS) -MMD -c $(src_file) -o $(obj_file)
 endef
-
 
 define ASM_RULE
 $(obj_file) : $(src_file)
