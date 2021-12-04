@@ -137,6 +137,7 @@ void estc_storage_save_data(ESTCStorage * storage, uint8_t data_type, const void
    storage->last_record = (StorageRecordHDR *) last_record_addr;
    storage->freespace_offset += aligned_size;
 
+   NRF_LOG_INFO("Sizeof storage %u", sizeof(StorageRecordHDR)); 
    NRF_LOG_INFO("Something written at %x offset %u alignedsize %u freespace_offset %u", (uint32_t) storage->last_record, storage->last_record_offset, aligned_size, storage->freespace_offset);    
 }
 

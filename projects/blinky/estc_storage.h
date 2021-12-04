@@ -9,9 +9,9 @@
 //sizeof(StorageRecordHDR) % sizeof(uint32_t) must be == 0, because of alignment
 typedef struct _StorageRecordHDR
 {
-    uint8_t data_type : 4;
-    uint8_t data_size : 8;   //size of data(max 255 bytes)
-    uint32_t unused  : 12;
+    uint8_t data_type;
+    uint8_t data_size;   //size of data(max 255 bytes)
+    uint8_t reserved;
     uint8_t crc8;
     uint8_t data[0];
 } StorageRecordHDR;
