@@ -12,7 +12,7 @@
 #include "estc_button.h"
 #include "estc_monotonic_time.h"
 #include "estc_storage.h"
-#include "estc_cli.h"
+#include "estc_uart_term.h"
 
 //total leds number
 #define ESTC_LEDS_NUMBER 4
@@ -27,7 +27,7 @@ typedef struct _Application
     ESTCButton button;
     ESTCHSVMachine hsv_machine;
     ESTCStorage storage;
-    ESTCCLI cli;
+    ESTCUARTTerm uart_term;
 
     //Duty cycle values for a sequence loaded in NRF_PWM_LOAD_INDIVIDUAL
     nrf_pwm_values_individual_t duty_cycle_values;

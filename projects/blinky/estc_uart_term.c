@@ -1,4 +1,4 @@
-#include "estc_cli.h"
+#include "estc_uart_term.h"
 
 #include <nrfx_nvmc.h>
 #include <nrf_log.h>
@@ -43,11 +43,16 @@ APP_USBD_CDC_ACM_GLOBAL_DEF(m_app_cdc_acm,
 
 #define READ_SIZE 1
 
-static char m_rx_buffer[READ_SIZE];
-static char m_tx_buffer[NRF_DRV_USBD_EPSIZE];
-static size_t m_tx_buffer_offset = 0;
-//size of last pending write
-static size_t m_tx_len = 0;
+typedef struct ESTCUARTTermInternal_
+{
+    char m_rx_buffer[READ_SIZE];
+    char m_tx_buffer[NRF_DRV_USBD_EPSIZE];
+    size_t m_tx_buffer_offset;
+    //size of last pending write
+    size_t m_tx_len;    
+} ESTCUARTTermInternal;
+
+static ESTCUARTTermInternal term_internal = {.m_tx_buffer_offset = 0, .m_tx_len = 0};
 
 static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
                                     app_usbd_cdc_acm_user_event_t event)
@@ -59,7 +64,7 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
         {
             /*Setup first transfer*/
             ret_code_t ret = app_usbd_cdc_acm_read(&m_app_cdc_acm,
-                                                   m_rx_buffer,
+                                                   term_internal.m_rx_buffer,
                                                    READ_SIZE);
             UNUSED_VARIABLE(ret);
             break;
@@ -68,13 +73,14 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
             break;
         case APP_USBD_CDC_ACM_USER_EVT_TX_DONE:
             //
-            if (m_tx_len < m_tx_buffer_offset)
+            if (term_internal.m_tx_len < term_internal.m_tx_buffer_offset)
             {   
                 //we should move untransmitted data to array beginning
-                memmove(&m_tx_buffer[0], &m_rx_buffer[0] + m_tx_len, m_tx_buffer_offset - m_tx_len);
+                memmove(&term_internal.m_tx_buffer[0], &term_internal.m_rx_buffer[0] + term_internal.m_tx_len, 
+                    term_internal.m_tx_buffer_offset - term_internal.m_tx_len);
             }
-            m_tx_buffer_offset = 0;
-            m_tx_len = 0;
+            term_internal.m_tx_buffer_offset = 0;
+            term_internal.m_tx_len = 0;
 
             break;
         case APP_USBD_CDC_ACM_USER_EVT_RX_DONE:
@@ -85,24 +91,20 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
             {
                 /*Get amount of data transfered*/
                 size_t size = app_usbd_cdc_acm_rx_size(p_cdc_acm);
-                NRF_LOG_INFO("RX: size: %lu char: %c", size, m_rx_buffer[0]);
+                NRF_LOG_INFO("RX: size: %lu char: %c", size, term_internal.m_rx_buffer[0]);
+
+                if (term_internal.m_rx_buffer[0] == '\r') 
+                {
+                    estc_uart_write(NULL, "\r\n", 2);
+                } 
+                else
+                {
+                    estc_uart_write(NULL, &term_internal.m_rx_buffer[0], 1);
+                }
                 
-                if (m_rx_buffer[0] == '\n' && m_tx_buffer_offset < sizeof(m_tx_buffer))
-                {
-                    m_tx_buffer[m_tx_buffer_offset] = '\r';
-                    m_tx_buffer_offset++;
-                }
-
-                if (m_tx_buffer_offset < sizeof(m_tx_buffer))
-                {
-                    m_tx_buffer[m_tx_buffer_offset] = m_rx_buffer[0];
-                    m_tx_buffer_offset++;
-                }
-
-
                 /* Fetch data until internal buffer is empty */
                 ret = app_usbd_cdc_acm_read(&m_app_cdc_acm,
-                                            m_rx_buffer,
+                                            term_internal.m_rx_buffer,
                                             READ_SIZE);
             } while (ret == NRF_SUCCESS);
             break;
@@ -149,7 +151,7 @@ static const app_usbd_config_t usbd_config =
 };
 
 
-void estc_cli_init(ESTCCLI * estc_cli)
+void estc_uart_term_init(ESTCUARTTerm * estc_uart_term)
 {
     ret_code_t ret;
     
@@ -160,7 +162,9 @@ void estc_cli_init(ESTCCLI * estc_cli)
     UNUSED_VARIABLE(ret);
 }
 
-void estc_cli_init2(ESTCCLI * estc_cli)
+
+
+void estc_uart_term_init_w_usbd(ESTCUARTTerm * estc_uart_term)
 {
     ret_code_t ret;
 
@@ -211,7 +215,7 @@ void estc_cli_init2(ESTCCLI * estc_cli)
    
 }
 
-void estc_cli_process_events(ESTCCLI * estc_cli)
+void estc_uart_term_process_events(ESTCUARTTerm * estc_uart_term)
 {
    
     while (app_usbd_event_queue_process())
@@ -220,12 +224,23 @@ void estc_cli_process_events(ESTCCLI * estc_cli)
     }
     
     //we have data to write and last write operation finished
-    if(m_tx_buffer_offset > 0 && m_tx_len == 0)
+    if(term_internal.m_tx_buffer_offset > 0 && term_internal.m_tx_len == 0)
     {
-        app_usbd_cdc_acm_write(&m_app_cdc_acm, m_tx_buffer, m_tx_buffer_offset);
-        m_tx_len = m_tx_buffer_offset;
+        app_usbd_cdc_acm_write(&m_app_cdc_acm, term_internal.m_tx_buffer, term_internal.m_tx_buffer_offset);
+        term_internal.m_tx_len = term_internal.m_tx_buffer_offset;
       
     }
     
 }
 
+void estc_uart_write(ESTCUARTTerm * estc_uart_term, const char * data, size_t data_size)
+{
+    if (term_internal.m_tx_buffer_offset < sizeof(term_internal.m_tx_buffer))
+    {
+        size_t available_space = sizeof(term_internal.m_tx_buffer) - term_internal.m_tx_buffer_offset;
+        size_t data_to_write = data_size < available_space ? data_size : available_space;
+
+        memcpy(&term_internal.m_tx_buffer[term_internal.m_tx_buffer_offset], data, data_to_write);
+        term_internal.m_tx_buffer_offset += data_to_write;
+    }    
+}

@@ -99,7 +99,7 @@ void application_init(Application* app)
     estc_hsv_machine_init(&app->hsv_machine, &led_color, PWM_VALUE_MAX, 
         hsv_machine_toggle_mode_handler, app );
 
-    estc_cli_init(&app->cli);
+    estc_uart_term_init(&app->uart_term);
     
     app->sequence.values.p_individual = &app->duty_cycle_values;
     app->sequence.length = NRF_PWM_VALUES_LENGTH(app->duty_cycle_values);
@@ -129,7 +129,7 @@ void application_next_tick(Application* app)
 {
     estc_button_process_update(&app->button);
     estc_hsv_machine_next_state(&app->hsv_machine);
-    estc_cli_process_events(&app->cli);
+    estc_uart_term_process_events(&app->uart_term);
 }
 
 void application_lock(Application* app)
