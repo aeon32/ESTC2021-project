@@ -87,6 +87,12 @@ static void hsv_machine_toggle_mode_handler(ESTCHSVMachineMode new_mode, void * 
     application_load_hsv_from_flash(app, &led_color);
 }
 
+static void terminal_command_handler(char * command, void * user_data)
+{
+    NRF_LOG_INFO("Command fired %s \n", command);
+
+}
+
 void application_init(Application* app)
 {
     memset(app, 0, sizeof(Application));
@@ -99,7 +105,7 @@ void application_init(Application* app)
     estc_hsv_machine_init(&app->hsv_machine, &led_color, PWM_VALUE_MAX, 
         hsv_machine_toggle_mode_handler, app );
 
-    estc_uart_term_init(&app->uart_term);
+    estc_uart_term_init(&app->uart_term, terminal_command_handler, &app);
     
     app->sequence.values.p_individual = &app->duty_cycle_values;
     app->sequence.length = NRF_PWM_VALUES_LENGTH(app->duty_cycle_values);

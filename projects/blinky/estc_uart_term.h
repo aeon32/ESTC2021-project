@@ -9,15 +9,21 @@ typedef struct ESTCUARTTerm_
 } ESTCUARTTerm;
 
 /**
+ * Handler fires when user enters the command.
+ * @param command is null-terminated string; can be modified during call
+**/
+typedef void (* ESTCUARTTermCommandHandler)(char * command, void * user_data);
+
+/**
  *  Struct ctor without usbd initialization (it must have been done before)
 **/
-void estc_uart_term_init(ESTCUARTTerm * estc_uart_term);
+void estc_uart_term_init(ESTCUARTTerm * estc_uart_term, ESTCUARTTermCommandHandler command_handler, void * user_data);
 
 
 /**
  *  Struct ctor with usbd initialization 
 **/
-void estc_uart_term_init_w_usbd(ESTCUARTTerm * estc_uart_term);
+void estc_uart_term_init_w_usbd(ESTCUARTTerm * estc_uart_term, ESTCUARTTermCommandHandler command_handler, void * user_data);
 
 
 /**
