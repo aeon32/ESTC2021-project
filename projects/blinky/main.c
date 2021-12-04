@@ -91,9 +91,6 @@ void gpiote_init()
 void rtc_handler(void* p_context)
 {
     estc_monotonic_time_update(RTC_PERIOD);
-    application_lock(&app);
-    application_next_tick(&app);
-    application_unlock(&app);
 }
 
 void rtc_init()
@@ -111,15 +108,18 @@ int main(void)
 {
     /* Configure board. */
     nrfx_systick_init();
+    log_init();
     application_init(&app);
     configure_gpio();
-    log_init();
     rtc_init();
     gpiote_init();
 
     NRF_LOG_INFO("Entering main loop");
     while (true)
     {
+        application_lock(&app);
+        application_next_tick(&app);
+        application_unlock(&app);        
         LOG_BACKEND_USB_PROCESS();
         NRF_LOG_PROCESS();
     }

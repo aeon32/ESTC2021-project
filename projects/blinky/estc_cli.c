@@ -24,6 +24,9 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
 #define CDC_ACM_DATA_EPIN       NRF_DRV_USBD_EPIN3
 #define CDC_ACM_DATA_EPOUT      NRF_DRV_USBD_EPOUT3
 
+#ifndef USBD_POWER_DETECTION
+#define USBD_POWER_DETECTION true
+#endif
 
 /**
  * @brief CDC_ACM class instance
@@ -42,7 +45,9 @@ APP_USBD_CDC_ACM_GLOBAL_DEF(m_app_cdc_acm,
 
 static char m_rx_buffer[READ_SIZE];
 static char m_tx_buffer[NRF_DRV_USBD_EPSIZE];
-static bool m_send_flag = true;
+static size_t m_tx_buffer_offset = 0;
+//size of last pending write
+static size_t m_tx_len = 0;
 
 static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
                                     app_usbd_cdc_acm_user_event_t event)
@@ -62,7 +67,14 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
         case APP_USBD_CDC_ACM_USER_EVT_PORT_CLOSE:
             break;
         case APP_USBD_CDC_ACM_USER_EVT_TX_DONE:
-            m_send_flag = true;
+            //
+            if (m_tx_len < m_tx_buffer_offset)
+            {   
+                //we should move untransmitted data to array beginning
+                memmove(&m_tx_buffer[0], &m_rx_buffer[0] + m_tx_len, m_tx_buffer_offset - m_tx_len);
+            }
+            m_tx_buffer_offset = 0;
+            m_tx_len = 0;
 
             break;
         case APP_USBD_CDC_ACM_USER_EVT_RX_DONE:
@@ -74,6 +86,19 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
                 /*Get amount of data transfered*/
                 size_t size = app_usbd_cdc_acm_rx_size(p_cdc_acm);
                 NRF_LOG_INFO("RX: size: %lu char: %c", size, m_rx_buffer[0]);
+                
+                if (m_rx_buffer[0] == '\n' && m_tx_buffer_offset < sizeof(m_tx_buffer))
+                {
+                    m_tx_buffer[m_tx_buffer_offset] = '\r';
+                    m_tx_buffer_offset++;
+                }
+
+                if (m_tx_buffer_offset < sizeof(m_tx_buffer))
+                {
+                    m_tx_buffer[m_tx_buffer_offset] = m_rx_buffer[0];
+                    m_tx_buffer_offset++;
+                }
+
 
                 /* Fetch data until internal buffer is empty */
                 ret = app_usbd_cdc_acm_read(&m_app_cdc_acm,
@@ -99,7 +124,7 @@ static void usbd_user_ev_handler(app_usbd_event_type_t event)
             break;
         case APP_USBD_EVT_STOPPED:
             app_usbd_disable();
-             break;
+            break;
         case APP_USBD_EVT_POWER_DETECTED:
             NRF_LOG_INFO("USB power detected");
             if (!nrf_drv_usbd_is_enabled())
@@ -125,6 +150,17 @@ static const app_usbd_config_t usbd_config =
 
 
 void estc_cli_init(ESTCCLI * estc_cli)
+{
+    ret_code_t ret;
+    
+    app_usbd_serial_num_generate();
+
+    app_usbd_class_inst_t const * class_cdc_acm = app_usbd_cdc_acm_class_inst_get(&m_app_cdc_acm);
+    ret = app_usbd_class_append(class_cdc_acm);
+    UNUSED_VARIABLE(ret);
+}
+
+void estc_cli_init2(ESTCCLI * estc_cli)
 {
     ret_code_t ret;
 
@@ -156,15 +192,23 @@ void estc_cli_init(ESTCCLI * estc_cli)
 
     return;
 
-    if (!nrf_drv_usbd_is_enabled())
+    if (USBD_POWER_DETECTION)
     {
-        app_usbd_enable();
+        ret = app_usbd_power_events_enable();
+        APP_ERROR_CHECK(ret);
     }
-    if (!nrf_drv_usbd_is_started())
+    else
     {
-        app_usbd_start();
+        if (!nrf_drv_usbd_is_enabled())
+        {
+            app_usbd_enable();
+        }
+        if (!nrf_drv_usbd_is_started())
+        {
+            app_usbd_start();
+        }
     }
-
+   
 }
 
 void estc_cli_process_events(ESTCCLI * estc_cli)
@@ -175,11 +219,12 @@ void estc_cli_process_events(ESTCCLI * estc_cli)
         /* Nothing to do */
     }
     
-    if(m_send_flag)
+    //we have data to write and last write operation finished
+    if(m_tx_buffer_offset > 0 && m_tx_len == 0)
     {
-        size_t size = sprintf(m_tx_buffer, "Hello USB CDC FA demo: \r\n");
-        app_usbd_cdc_acm_write(&m_app_cdc_acm, m_tx_buffer, size);
-        m_send_flag = false;
+        app_usbd_cdc_acm_write(&m_app_cdc_acm, m_tx_buffer, m_tx_buffer_offset);
+        m_tx_len = m_tx_buffer_offset;
+      
     }
     
 }
