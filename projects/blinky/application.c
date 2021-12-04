@@ -1,6 +1,9 @@
 #include "application.h"
+#include "estc_strutils.h"
 
 #include <nrf_log.h>
+#include <string.h>
+
 
 enum STORAGE_DATA_TYPES
 {
@@ -75,6 +78,11 @@ static bool application_load_hsv_from_flash(Application * app, HSVColor * out_co
     return res;
 }
 
+static void application_cli_write(Application * app, const char * data, size_t data_size)
+{
+    estc_uart_write(&app->uart_term, data, data_size);
+}
+
 static void hsv_machine_toggle_mode_handler(ESTCHSVMachineMode new_mode, void * user_data)
 {
     if (new_mode != ESTCHSV_NO_INPUT)
@@ -87,10 +95,84 @@ static void hsv_machine_toggle_mode_handler(ESTCHSVMachineMode new_mode, void * 
     application_load_hsv_from_flash(app, &led_color);
 }
 
+
+
+static const char * TERMINAL_COMMAND_DELIMITER = " \t";
+
+static bool terminal_command_handle_rgb(char ** strtok_context, Application * app)
+{
+    NRF_LOG_INFO("RGB command handler");
+    bool command_ok = true;
+
+
+
+    return true;
+}
+
+static bool terminal_command_handle_hsv(char ** strtok_context, Application * app)
+{
+    NRF_LOG_INFO("HSV command handler");
+    bool command_ok = true;
+    HSVColor led_color;
+    for (int i = 0; command_ok && i < HSV_COMPONENTS; i++)
+    {
+        char * token = estc_strtok_r(NULL, TERMINAL_COMMAND_DELIMITER, &context);
+        command_ok = (token != NULL);
+        long int comp_value;
+        if (command_ok)
+        {   
+            char * endptr;
+            comp_value = strtol(token, &endptr, 10);
+            command_ok = (*endptr == '\0');
+        }
+        if (command_ok)
+        {
+            switch (i)
+            {
+                case 0:
+                   command_ok = (comp_value >=0 ) && (comp_value < 360);
+                break;
+                case 1:
+                   command_ok = (comp_value >=0 ) && (comp_value < 100);
+                break;
+                case 2:
+                   command_ok = (comp_value >=0 ) && (comp_value < 100);
+                break;                                                
+            }
+        }
+        if (command_ok)
+            comp_value.hsv_components[i] = comp_value;
+    }
+    
+    return true;
+}
+
 static void terminal_command_handler(char * command, void * user_data)
 {
-    NRF_LOG_INFO("Command fired %s \n", command);
-
+    Application * app = (Application *) user_data;
+    char * context = NULL;
+    char * token = estc_strtok_r(command, TERMINAL_COMMAND_DELIMITER, &context);
+    bool command_ok = false;
+    if (token)
+    {
+        if (strcmp(token,"RGB") == 0)
+        {
+            command_ok = terminal_command_handle_rgb(&context, app);
+        } 
+        else if (strcmp(token, "HSV") == 0)
+        {
+            command_ok = terminal_command_handle_hsv(&context, app);
+        } 
+        else 
+        {
+            command_ok = false;
+        }
+    }
+    if (!command_ok)
+    {
+        const char * help_string = "Unknown command.\r\nUsage:\r\nRGB <red> <green> <blue>\r\n-or-\r\nHSV <hur> <saturation> <value>\r\n";
+        application_cli_write(app, help_string, strlen(help_string));
+    }
 }
 
 void application_init(Application* app)

@@ -30,6 +30,7 @@ C_SRCS := main.c \
   estc_hsv_machine.c\
   estc_monotonic_time.c\
   estc_button.c\
+  estc_strutils.c\
   estc_storage.c\
   application.c\
   $(SDK_ROOT)/components/libraries/log/src/nrf_log_frontend.c \
