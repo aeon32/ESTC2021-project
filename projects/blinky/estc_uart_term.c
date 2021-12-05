@@ -92,7 +92,7 @@ static void estc_uart_term_command_fired(ESTCUARTTerm * estc_uart_term)
 static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
                                     app_usbd_cdc_acm_user_event_t event)
 {
-    app_usbd_cdc_acm_t const * p_cdc_acm = app_usbd_cdc_acm_class_get(p_inst);
+    //app_usbd_cdc_acm_t const * p_cdc_acm = app_usbd_cdc_acm_class_get(p_inst);
     switch (event)
     {
         case APP_USBD_CDC_ACM_USER_EVT_PORT_OPEN:
@@ -108,7 +108,6 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
             break;
         case APP_USBD_CDC_ACM_USER_EVT_TX_DONE:
             //
-            NRF_LOG_INFO("Write is done offset %u  len %u", term_internal.tx_buffer_offset, term_internal.tx_len);
             if (term_internal.tx_len < term_internal.tx_buffer_offset)
             {   
                 //we should move untransmitted data to array beginning
@@ -126,13 +125,8 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
         case APP_USBD_CDC_ACM_USER_EVT_RX_DONE:
         {
             ret_code_t ret;
-            NRF_LOG_INFO("Bytes waiting: %d", app_usbd_cdc_acm_bytes_stored(p_cdc_acm));
             do
             {
-                /*Get amount of data transfered*/
-                size_t size = app_usbd_cdc_acm_rx_size(p_cdc_acm);
-                NRF_LOG_INFO("RX: size: %lu char: %c", size, term_internal.rx_buffer[0]);
-
                 if (term_internal.rx_buffer[0] == '\r') 
                 {
                     estc_uart_write(NULL, "\r\n", 2);
@@ -270,15 +264,7 @@ void estc_uart_term_process_events(ESTCUARTTerm * estc_uart_term)
         
         size_t data_to_send_size = term_internal.tx_buffer_offset < NRF_DRV_USBD_EPSIZE ? term_internal.tx_buffer_offset : NRF_DRV_USBD_EPSIZE;
 
-        char aux[1024];
-        memcpy(&aux, &term_internal.tx_buffer[0], data_to_send_size);
-        aux[data_to_send_size] = '\0';
-        if (aux[0] == '\r') aux[0] = 'r';
-        if (aux[1] == '\n') aux[1] = 'n';
-
         app_usbd_cdc_acm_write(&m_app_cdc_acm, term_internal.tx_buffer, data_to_send_size);
-
-        NRF_LOG_INFO("Sent %s offset %u data_to_send_size %u", aux, term_internal.tx_buffer_offset, data_to_send_size);
 
         term_internal.tx_len = data_to_send_size;
     }
@@ -294,10 +280,6 @@ void estc_uart_write(ESTCUARTTerm * estc_uart_term, const char * data, size_t da
 
         memcpy(&term_internal.tx_buffer[term_internal.tx_buffer_offset], data, data_to_write_size);
 
-        char aux[1024];
-        memcpy(&aux, &term_internal.tx_buffer[term_internal.tx_buffer_offset], data_to_write_size);
-        aux[data_to_write_size] = '\0';
-        NRF_LOG_INFO("Have to write %s offset %u data_to_write_size %u", aux, term_internal.tx_buffer_offset, data_to_write_size);
 
         term_internal.tx_buffer_offset += data_to_write_size;
     }    
