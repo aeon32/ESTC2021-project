@@ -42,12 +42,13 @@ APP_USBD_CDC_ACM_GLOBAL_DEF(m_app_cdc_acm,
 );
 
 #define READ_SIZE 1
+#define WRITE_BUFFER_SIZE 256
 #define ESTC_MAX_COMMAND_SIZE 63
 
 typedef struct ESTCUARTTermInternal_
 {
     char rx_buffer[READ_SIZE];
-    char tx_buffer[NRF_DRV_USBD_EPSIZE];
+    char tx_buffer[WRITE_BUFFER_SIZE];
     
     size_t tx_buffer_offset;
     //size of last pending write
@@ -107,12 +108,13 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
             break;
         case APP_USBD_CDC_ACM_USER_EVT_TX_DONE:
             //
+            NRF_LOG_INFO("Write is done offset %u  len %u", term_internal.tx_buffer_offset, term_internal.tx_len);
             if (term_internal.tx_len < term_internal.tx_buffer_offset)
             {   
                 //we should move untransmitted data to array beginning
-                memmove(&term_internal.tx_buffer[0], &term_internal.rx_buffer[0] + term_internal.tx_len, 
+                memmove(&term_internal.tx_buffer[0], &term_internal.tx_buffer[0] + term_internal.tx_len, 
                     term_internal.tx_buffer_offset - term_internal.tx_len);
-                term_internal.tx_buffer_offset = term_internal.tx_len;
+                term_internal.tx_buffer_offset -= term_internal.tx_len;
             } 
             else
             {
@@ -265,22 +267,38 @@ void estc_uart_term_process_events(ESTCUARTTerm * estc_uart_term)
     //we have data to write and last write operation finished
     if(term_internal.tx_buffer_offset > 0 && term_internal.tx_len == 0)
     {
-        app_usbd_cdc_acm_write(&m_app_cdc_acm, term_internal.tx_buffer, term_internal.tx_buffer_offset);
-        term_internal.tx_len = term_internal.tx_buffer_offset;
-      
+        
+        size_t data_to_send_size = term_internal.tx_buffer_offset < NRF_DRV_USBD_EPSIZE ? term_internal.tx_buffer_offset : NRF_DRV_USBD_EPSIZE;
+
+        char aux[1024];
+        memcpy(&aux, &term_internal.tx_buffer[0], data_to_send_size);
+        aux[data_to_send_size] = '\0';
+        if (aux[0] == '\r') aux[0] = 'r';
+        if (aux[1] == '\n') aux[1] = 'n';
+
+        app_usbd_cdc_acm_write(&m_app_cdc_acm, term_internal.tx_buffer, data_to_send_size);
+
+        NRF_LOG_INFO("Sent %s offset %u data_to_send_size %u", aux, term_internal.tx_buffer_offset, data_to_send_size);
+
+        term_internal.tx_len = data_to_send_size;
     }
-    
 }
 
 void estc_uart_write(ESTCUARTTerm * estc_uart_term, const char * data, size_t data_size)
 {
     if (term_internal.tx_buffer_offset < sizeof(term_internal.tx_buffer))
     {
-        //copy data to internal buffer ( if space is available)
+        //copy data to the internal buffer ( if space is available)
         size_t available_space = sizeof(term_internal.tx_buffer) - term_internal.tx_buffer_offset;
         size_t data_to_write_size = data_size < available_space ? data_size : available_space;
 
         memcpy(&term_internal.tx_buffer[term_internal.tx_buffer_offset], data, data_to_write_size);
+
+        char aux[1024];
+        memcpy(&aux, &term_internal.tx_buffer[term_internal.tx_buffer_offset], data_to_write_size);
+        aux[data_to_write_size] = '\0';
+        NRF_LOG_INFO("Have to write %s offset %u data_to_write_size %u", aux, term_internal.tx_buffer_offset, data_to_write_size);
+
         term_internal.tx_buffer_offset += data_to_write_size;
     }    
 }

@@ -3,7 +3,7 @@
 
 #include <nrf_log.h>
 #include <string.h>
-
+#include <stdlib.h>
 
 enum STORAGE_DATA_TYPES
 {
@@ -95,18 +95,13 @@ static void hsv_machine_toggle_mode_handler(ESTCHSVMachineMode new_mode, void * 
     application_load_hsv_from_flash(app, &led_color);
 }
 
-
-
 static const char * TERMINAL_COMMAND_DELIMITER = " \t";
 
 static bool terminal_command_handle_rgb(char ** strtok_context, Application * app)
 {
     NRF_LOG_INFO("RGB command handler");
     bool command_ok = true;
-
-
-
-    return true;
+    return command_ok;
 }
 
 static bool terminal_command_handle_hsv(char ** strtok_context, Application * app)
@@ -116,7 +111,7 @@ static bool terminal_command_handle_hsv(char ** strtok_context, Application * ap
     HSVColor led_color;
     for (int i = 0; command_ok && i < HSV_COMPONENTS; i++)
     {
-        char * token = estc_strtok_r(NULL, TERMINAL_COMMAND_DELIMITER, &context);
+        char * token = estc_strtok_r(NULL, TERMINAL_COMMAND_DELIMITER, strtok_context);
         command_ok = (token != NULL);
         long int comp_value;
         if (command_ok)
@@ -141,10 +136,16 @@ static bool terminal_command_handle_hsv(char ** strtok_context, Application * ap
             }
         }
         if (command_ok)
-            comp_value.hsv_components[i] = comp_value;
+            led_color.hsv_components[i] = comp_value;
     }
-    
-    return true;
+    if (command_ok)
+    {
+        estc_hsv_machine_set_components(&app->hsv_machine, &led_color);
+        estc_storage_save_data(&app->storage, STORAGE_HSV_VALUES, &led_color, sizeof(HSVColor) );
+        const char * save_ok_string = "Successful.\r\n";
+        application_cli_write(app, save_ok_string, strlen( save_ok_string));
+    }
+    return command_ok;
 }
 
 static void terminal_command_handler(char * command, void * user_data)
@@ -152,9 +153,11 @@ static void terminal_command_handler(char * command, void * user_data)
     Application * app = (Application *) user_data;
     char * context = NULL;
     char * token = estc_strtok_r(command, TERMINAL_COMMAND_DELIMITER, &context);
+    NRF_LOG_INFO("Command %s", command);
     bool command_ok = false;
     if (token)
     {
+        NRF_LOG_INFO("Token %s", token);
         if (strcmp(token,"RGB") == 0)
         {
             command_ok = terminal_command_handle_rgb(&context, app);
@@ -170,7 +173,8 @@ static void terminal_command_handler(char * command, void * user_data)
     }
     if (!command_ok)
     {
-        const char * help_string = "Unknown command.\r\nUsage:\r\nRGB <red> <green> <blue>\r\n-or-\r\nHSV <hur> <saturation> <value>\r\n";
+        //const char * help_string = "Unknown command.\r\nUsage:\r\nRGB <red> <green> <blue>\r\n-or-\r\nHSV <hur> <saturation> <value>\r\n";
+        const char * help_string = "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz0123456789QWERTYUIOP\r\n";
         application_cli_write(app, help_string, strlen(help_string));
     }
 }

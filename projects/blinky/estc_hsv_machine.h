@@ -74,6 +74,11 @@ uint32_t estc_hsv_machine_get_led_pwm(ESTCHSVMachine* hsv_machine, uint32_t led_
 /**
  * Return hsv values array
 **/
-HSVColor estc_hsv_machine_get_components(ESTCHSVMachine* blinky_machine);
+HSVColor estc_hsv_machine_get_components(ESTCHSVMachine* hsv_machine);
+
+/**
+ * Set hsv color
+**/
+void estc_hsv_machine_set_components(ESTCHSVMachine* hsv_machine, const HSVColor * led_color);
 
 #endif

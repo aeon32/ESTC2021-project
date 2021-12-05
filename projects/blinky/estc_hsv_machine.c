@@ -235,3 +235,13 @@ HSVColor estc_hsv_machine_get_components(ESTCHSVMachine* hsv_machine)
 {
     return hsv_machine->led_color;
 }
+
+void estc_hsv_machine_set_components(ESTCHSVMachine* hsv_machine, const HSVColor * led_color)
+{
+    hsv_machine->led_color = *led_color;
+    for (int i = 0; i < HSV_COMPONENTS; i++)
+    {
+        hsv_machine->hsv_components_increasing[i] = !(led_color->hsv_components[i] >= MAX_COMPONENT_VALUES[i]);
+    }
+    estc_hsv_machine_calculate_rgb_values(hsv_machine);    
+}
