@@ -101,6 +101,48 @@ static bool terminal_command_handle_rgb(char ** strtok_context, Application * ap
 {
     NRF_LOG_INFO("RGB command handler");
     bool command_ok = true;
+    RGBColor led_color;
+    int i = 0;
+    for (; command_ok && i < RGB_COMPONENTS; i++)
+    {
+        char * token = estc_strtok_r(NULL, TERMINAL_COMMAND_DELIMITER, strtok_context);
+        command_ok = (token != NULL);
+        long int comp_value;
+        if (command_ok)
+        {   
+            char * endptr;
+            comp_value = strtol(token, &endptr, 10);
+            command_ok = (*endptr == '\0');
+            NRF_LOG_INFO("RGB command strtol %d %d", comp_value, command_ok);        
+        }
+        if (command_ok)
+        {
+            switch (i)
+            {
+                case 0:
+                   command_ok = (comp_value >=0 ) && (comp_value <=255);
+                break;
+                case 1:
+                   command_ok = (comp_value >=0 ) && (comp_value <=255);
+                break;
+                case 2:
+                   command_ok = (comp_value >=0 ) && (comp_value <=255);
+                break;                                                
+            }
+        }
+        if (command_ok)
+            led_color.rgb_components[i] = comp_value;
+    }
+    command_ok = command_ok && (i == RGB_COMPONENTS); //all components is set
+
+    if (command_ok)
+    {
+        estc_hsv_machine_set_components_rgb(&app->hsv_machine, &led_color);
+        HSVColor led_color = estc_hsv_machine_get_components(&app->hsv_machine);
+        estc_storage_save_data(&app->storage, STORAGE_HSV_VALUES, &led_color, sizeof(HSVColor) );
+        const char * save_ok_string = "Successful.\r\n";
+        application_cli_write(app, save_ok_string, strlen( save_ok_string));
+    }
     return command_ok;
 }
 
@@ -143,7 +185,7 @@ static bool terminal_command_handle_hsv(char ** strtok_context, Application * ap
         if (command_ok)
             led_color.hsv_components[i] = comp_value;
     }
-    command_ok = command_ok && (i == HSV_COMPONENTS); //all components is setted
+    command_ok = command_ok && (i == HSV_COMPONENTS); //all components is set
 
     if (command_ok)
     {
@@ -181,8 +223,8 @@ static void terminal_command_handler(char * command, void * user_data)
     } 
     if (!command_ok)
     {
-        const char * help_string = "Unknown command.\r\nUsage:\r\nRGB <red> <green> <blue>\r\n-or-\r\nHSV <hur:0-360> <saturation:0-100> <value:0-100>\r\n";
-        //const char * help_string = "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz0123456789QWERTYUIOP\r\n";
+        const char * help_string = "Unknown command.\r\nUsage:\r\n"
+        "RGB <red:0-255> <green:0-255> <blue:0-255>\r\n-or-\r\nHSV <hur:0-360> <saturation:0-100> <value:0-100>\r\n";
         application_cli_write(app, help_string, strlen(help_string));
     }
 }
