@@ -1,15 +1,12 @@
 include ../../paths.mk
 include ../../common_defs.mk
 
-
 PROJECT_NAME     := blinky
 OUTPUT_DIRECTORY := _build
 OBJ_DIRECTORY := $(OUTPUT_DIRECTORY)/obj
 
-
 BINARY_PATH = $(OUTPUT_DIRECTORY)/$(PROJECT_NAME)
 HEX_PATH = $(OUTPUT_DIRECTORY)/$(PROJECT_NAME).hex
-
 
 CFLAGS += -DUSE_APP_CONFIG
 CFLAGS += -DAPP_TIMER_V2 

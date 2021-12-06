@@ -17,12 +17,12 @@
 static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
                                     app_usbd_cdc_acm_user_event_t event);
 
-#define CDC_ACM_COMM_INTERFACE  2
-#define CDC_ACM_COMM_EPIN       NRF_DRV_USBD_EPIN4
+#define UART_TERM_CDC_ACM_COMM_INTERFACE  2
+#define UART_TERM_CDC_ACM_COMM_EPIN       NRF_DRV_USBD_EPIN4
 
-#define CDC_ACM_DATA_INTERFACE  3
-#define CDC_ACM_DATA_EPIN       NRF_DRV_USBD_EPIN3
-#define CDC_ACM_DATA_EPOUT      NRF_DRV_USBD_EPOUT3
+#define UART_TERM_CDC_ACM_DATA_INTERFACE  3
+#define UART_TERM_CDC_ACM_DATA_EPIN       NRF_DRV_USBD_EPIN3
+#define UART_TERM_CDC_ACM_DATA_EPOUT      NRF_DRV_USBD_EPOUT3
 
 #ifndef USBD_POWER_DETECTION
 #define USBD_POWER_DETECTION true
@@ -33,11 +33,11 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
  * */
 APP_USBD_CDC_ACM_GLOBAL_DEF(m_app_cdc_acm,
                             cdc_acm_user_ev_handler,
-                            CDC_ACM_COMM_INTERFACE,
-                            CDC_ACM_DATA_INTERFACE,
-                            CDC_ACM_COMM_EPIN,
-                            CDC_ACM_DATA_EPIN,
-                            CDC_ACM_DATA_EPOUT,
+                            UART_TERM_CDC_ACM_COMM_INTERFACE,
+                            UART_TERM_CDC_ACM_DATA_INTERFACE,
+                            UART_TERM_CDC_ACM_COMM_EPIN,
+                            UART_TERM_CDC_ACM_DATA_EPIN,
+                            UART_TERM_CDC_ACM_DATA_EPOUT,
                             APP_USBD_CDC_COMM_PROTOCOL_AT_V250
 );
 

@@ -78,11 +78,6 @@ static bool application_load_hsv_from_flash(Application * app, HSVColor * out_co
     return res;
 }
 
-static void application_cli_write(Application * app, const char * data, size_t data_size)
-{
-    estc_uart_write(data, data_size);
-}
-
 static void hsv_machine_toggle_mode_handler(ESTCHSVMachineMode new_mode, void * user_data)
 {
     if (new_mode != ESTCHSV_NO_INPUT)
@@ -95,7 +90,13 @@ static void hsv_machine_toggle_mode_handler(ESTCHSVMachineMode new_mode, void * 
     application_load_hsv_from_flash(app, &led_color);
 }
 
+#if defined(CLI_SUPPORT) && CLI_SUPPORT
 static const char * TERMINAL_COMMAND_DELIMITER = " \t";
+
+static void application_cli_write(Application * app, const char * data, size_t data_size)
+{
+    estc_uart_write(data, data_size);
+}
 
 static bool terminal_command_handle_rgb(char ** strtok_context, Application * app)
 {
@@ -228,12 +229,13 @@ static void terminal_command_handler(char * command, void * user_data)
         application_cli_write(app, help_string, strlen(help_string));
     }
 }
+#endif //CLI_SUPPORT
 
 void application_init(Application* app)
 {
     memset(app, 0, sizeof(Application));
     HSVColor led_color = {.hsv_components = {0, 255, 255}};
-    
+
     estc_storage_init(&app->storage);
     application_load_hsv_from_flash(app, &led_color);
     
@@ -241,7 +243,9 @@ void application_init(Application* app)
     estc_hsv_machine_init(&app->hsv_machine, &led_color, PWM_VALUE_MAX, 
         hsv_machine_toggle_mode_handler, app );
 
+#if defined(CLI_SUPPORT) && CLI_SUPPORT
     estc_uart_term_init(terminal_command_handler, app);
+#endif        
     
     app->sequence.values.p_individual = &app->duty_cycle_values;
     app->sequence.length = NRF_PWM_VALUES_LENGTH(app->duty_cycle_values);
@@ -271,7 +275,9 @@ void application_next_tick(Application* app)
 {
     estc_button_process_update(&app->button);
     estc_hsv_machine_next_state(&app->hsv_machine);
+#ifdef CLI_SUPPORT
     estc_uart_term_process_events();
+#endif    
 }
 
 void application_lock(Application* app)
