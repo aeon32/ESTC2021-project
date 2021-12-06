@@ -17,12 +17,12 @@
 static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
                                     app_usbd_cdc_acm_user_event_t event);
 
-#define CDC_ACM_COMM_INTERFACE  2
-#define CDC_ACM_COMM_EPIN       NRF_DRV_USBD_EPIN4
+#define UART_TERM_CDC_ACM_COMM_INTERFACE  2
+#define UART_TERM_CDC_ACM_COMM_EPIN       NRF_DRV_USBD_EPIN4
 
-#define CDC_ACM_DATA_INTERFACE  3
-#define CDC_ACM_DATA_EPIN       NRF_DRV_USBD_EPIN3
-#define CDC_ACM_DATA_EPOUT      NRF_DRV_USBD_EPOUT3
+#define UART_TERM_CDC_ACM_DATA_INTERFACE  3
+#define UART_TERM_CDC_ACM_DATA_EPIN       NRF_DRV_USBD_EPIN3
+#define UART_TERM_CDC_ACM_DATA_EPOUT      NRF_DRV_USBD_EPOUT3
 
 #ifndef USBD_POWER_DETECTION
 #define USBD_POWER_DETECTION true
@@ -33,11 +33,11 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
  * */
 APP_USBD_CDC_ACM_GLOBAL_DEF(m_app_cdc_acm,
                             cdc_acm_user_ev_handler,
-                            CDC_ACM_COMM_INTERFACE,
-                            CDC_ACM_DATA_INTERFACE,
-                            CDC_ACM_COMM_EPIN,
-                            CDC_ACM_DATA_EPIN,
-                            CDC_ACM_DATA_EPOUT,
+                            UART_TERM_CDC_ACM_COMM_INTERFACE,
+                            UART_TERM_CDC_ACM_DATA_INTERFACE,
+                            UART_TERM_CDC_ACM_COMM_EPIN,
+                            UART_TERM_CDC_ACM_DATA_EPIN,
+                            UART_TERM_CDC_ACM_DATA_EPOUT,
                             APP_USBD_CDC_COMM_PROTOCOL_AT_V250
 );
 
@@ -65,7 +65,7 @@ static ESTCUARTTermInternal term_internal =
      { .tx_buffer_offset = 0, .tx_len = 0, .command_offset = 0, .command_handler = NULL, .user_data = NULL};
 
 
-static void estc_uart_term_append_to_command(ESTCUARTTerm * estc_uart_term, const char * data, size_t data_size)
+static void estc_uart_term_append_to_command(const char * data, size_t data_size)
 {
     if (term_internal.command_offset < sizeof(term_internal.command))
     {
@@ -78,7 +78,7 @@ static void estc_uart_term_append_to_command(ESTCUARTTerm * estc_uart_term, cons
     }    
 }
 
-static void estc_uart_term_command_fired(ESTCUARTTerm * estc_uart_term)
+static void estc_uart_term_command_fired()
 {
     term_internal.command[term_internal.command_offset] = '\0'; 
     term_internal.command_offset = 0;
@@ -129,13 +129,13 @@ static void cdc_acm_user_ev_handler(app_usbd_class_inst_t const * p_inst,
             {
                 if (term_internal.rx_buffer[0] == '\r') 
                 {
-                    estc_uart_write(NULL, "\r\n", 2);
-                    estc_uart_term_command_fired(NULL);
+                    estc_uart_write("\r\n", 2);
+                    estc_uart_term_command_fired();
                 } 
                 else
                 {
-                    estc_uart_write(NULL, &term_internal.rx_buffer[0], 1);
-                    estc_uart_term_append_to_command(NULL, &term_internal.rx_buffer[0], 1);
+                    estc_uart_write(&term_internal.rx_buffer[0], 1);
+                    estc_uart_term_append_to_command(&term_internal.rx_buffer[0], 1);
                 }
                 
                 /* Fetch data until internal buffer is empty */
@@ -187,7 +187,7 @@ static const app_usbd_config_t usbd_config =
 };
 
 
-void estc_uart_term_init(ESTCUARTTerm * estc_uart_term, ESTCUARTTermCommandHandler command_handler, void * user_data)
+void estc_uart_term_init(ESTCUARTTermCommandHandler command_handler, void * user_data)
 {
     ret_code_t ret;
     term_internal.command_handler = command_handler;
@@ -200,7 +200,7 @@ void estc_uart_term_init(ESTCUARTTerm * estc_uart_term, ESTCUARTTermCommandHandl
 
 
 
-void estc_uart_term_init_w_usbd(ESTCUARTTerm * estc_uart_term, ESTCUARTTermCommandHandler command_handler, void * user_data)
+void estc_uart_term_init_w_usbd(ESTCUARTTermCommandHandler command_handler, void * user_data)
 {
     ret_code_t ret;
     term_internal.command_handler = command_handler;
@@ -250,7 +250,7 @@ void estc_uart_term_init_w_usbd(ESTCUARTTerm * estc_uart_term, ESTCUARTTermComma
    
 }
 
-void estc_uart_term_process_events(ESTCUARTTerm * estc_uart_term)
+void estc_uart_term_process_events()
 {
    
     while (app_usbd_event_queue_process())
@@ -270,7 +270,7 @@ void estc_uart_term_process_events(ESTCUARTTerm * estc_uart_term)
     }
 }
 
-void estc_uart_write(ESTCUARTTerm * estc_uart_term, const char * data, size_t data_size)
+void estc_uart_write(const char * data, size_t data_size)
 {
     if (term_internal.tx_buffer_offset < sizeof(term_internal.tx_buffer))
     {

@@ -1,15 +1,12 @@
 include ../../paths.mk
 include ../../common_defs.mk
 
-
 PROJECT_NAME     := blinky
 OUTPUT_DIRECTORY := _build
 OBJ_DIRECTORY := $(OUTPUT_DIRECTORY)/obj
 
-
 BINARY_PATH = $(OUTPUT_DIRECTORY)/$(PROJECT_NAME)
 HEX_PATH = $(OUTPUT_DIRECTORY)/$(PROJECT_NAME).hex
-
 
 CFLAGS += -DUSE_APP_CONFIG
 CFLAGS += -DAPP_TIMER_V2 
@@ -119,7 +116,7 @@ flash: $(HEX_PATH)
       --softdevice $(SDK_ROOT)/components/softdevice/s113/hex/s113_nrf52_7.2.0_softdevice.hex \
       --sd-id 0x0102 \
         >/dev/null
-	nrfutil dfu usb_serial \
+	nrfutil dfu usb-serial \
       --package $(OUTPUT_DIRECTORY)/app.zip \
       --port $(DFU_PORT)
 

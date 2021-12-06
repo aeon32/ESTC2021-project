@@ -27,8 +27,6 @@ typedef struct _Application
     ESTCButton button;
     ESTCHSVMachine hsv_machine;
     ESTCStorage storage;
-    ESTCUARTTerm uart_term;
-
     //Duty cycle values for a sequence loaded in NRF_PWM_LOAD_INDIVIDUAL
     nrf_pwm_values_individual_t duty_cycle_values;
     //structure for defining a sequence of PWM duty cycles

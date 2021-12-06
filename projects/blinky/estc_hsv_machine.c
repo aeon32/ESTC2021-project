@@ -170,6 +170,52 @@ static void hsv_to_rgb(int32_t * in_hsv_values, uint32_t* out_rgb_values)
     }
 }
 
+void rgb_to_hsv(const RGBColor * in_rgb, HSVColor * out_hsv)
+{
+    int32_t rgb_min = in_rgb->rgb_components[0];
+    int32_t rgb_max = in_rgb->rgb_components[0];
+    memset(out_hsv, 0, sizeof(HSVColor));
+    
+    for (int i = 1; i < RGB_COMPONENTS; i++)
+    {
+        if (in_rgb->rgb_components[i] < rgb_min)
+        {
+            rgb_min = in_rgb->rgb_components[i];
+        }
+        if (in_rgb->rgb_components[i] > rgb_max)
+        {
+            rgb_max = in_rgb->rgb_components[i];
+        }        
+    }
+
+    out_hsv->hsv.v = rgb_max;
+    if (out_hsv->hsv.v == 0)
+    {
+        out_hsv->hsv.h = 0;
+        out_hsv->hsv.s = 0;
+        return;
+    }
+
+    out_hsv->hsv.s = 255 * (rgb_max - rgb_min) / out_hsv->hsv.v;
+    if (out_hsv->hsv.s == 0)
+    {
+        out_hsv->hsv.h = 0;
+        return;
+    }
+
+    if (rgb_max == in_rgb->rgb.r)
+        out_hsv->hsv.h = 0 + 43 * (in_rgb->rgb.g - in_rgb->rgb.b) / (rgb_max - rgb_min);
+    else if (rgb_max == in_rgb->rgb.g)
+        out_hsv->hsv.h = 85 + 43 * (in_rgb->rgb.b - in_rgb->rgb.r) / (rgb_max - rgb_min);
+    else
+        out_hsv->hsv.h = 171 + 43 * (in_rgb->rgb.r - in_rgb->rgb.g) / (rgb_max - rgb_min);
+
+    if (out_hsv->hsv.h < 0)
+        out_hsv->hsv.h = 255 + out_hsv->hsv.h;
+   
+}
+
+
 static void estc_hsv_machine_calculate_rgb_values(ESTCHSVMachine* hsv_machine)
 {
     hsv_to_rgb(&hsv_machine->led_color.hsv_components[0], &hsv_machine->pwm_values[1]);
@@ -242,6 +288,16 @@ void estc_hsv_machine_set_components(ESTCHSVMachine* hsv_machine, const HSVColor
     for (int i = 0; i < HSV_COMPONENTS; i++)
     {
         hsv_machine->hsv_components_increasing[i] = !(led_color->hsv_components[i] >= MAX_COMPONENT_VALUES[i]);
+    }
+    estc_hsv_machine_calculate_rgb_values(hsv_machine);    
+}
+
+void estc_hsv_machine_set_components_rgb(ESTCHSVMachine* hsv_machine, const RGBColor * rgb_color)
+{
+    rgb_to_hsv(rgb_color, &hsv_machine->led_color);
+    for (int i = 0; i < HSV_COMPONENTS; i++)
+    {
+        hsv_machine->hsv_components_increasing[i] = !(hsv_machine->led_color.hsv_components[i] >= MAX_COMPONENT_VALUES[i]);
     }
     estc_hsv_machine_calculate_rgb_values(hsv_machine);    
 }

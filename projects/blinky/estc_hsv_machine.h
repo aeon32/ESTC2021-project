@@ -5,6 +5,7 @@
 
 #define HSV_MACHINE_LEDS 4
 #define HSV_COMPONENTS 3
+#define RGB_COMPONENTS 3
 
 typedef enum _ESTCHSVMachineMode
 {
@@ -25,6 +26,17 @@ typedef union
         int32_t v;
     } hsv;
 } HSVColor;
+
+typedef union 
+{
+    int32_t rgb_components[RGB_COMPONENTS];
+    struct {
+        int32_t r;
+        int32_t g;
+        int32_t b;
+    } rgb;
+} RGBColor;
+
 
 typedef struct
 {
@@ -80,5 +92,10 @@ HSVColor estc_hsv_machine_get_components(ESTCHSVMachine* hsv_machine);
  * Set hsv color
 **/
 void estc_hsv_machine_set_components(ESTCHSVMachine* hsv_machine, const HSVColor * led_color);
+
+/**
+ * Set rgb color
+**/
+void estc_hsv_machine_set_components_rgb(ESTCHSVMachine* hsv_machine, const RGBColor * led_color);
 
 #endif
