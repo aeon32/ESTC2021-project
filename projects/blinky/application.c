@@ -80,7 +80,7 @@ static bool application_load_hsv_from_flash(Application * app, HSVColor * out_co
 
 static void application_cli_write(Application * app, const char * data, size_t data_size)
 {
-    estc_uart_write(&app->uart_term, data, data_size);
+    estc_uart_write(data, data_size);
 }
 
 static void hsv_machine_toggle_mode_handler(ESTCHSVMachineMode new_mode, void * user_data)
@@ -241,7 +241,7 @@ void application_init(Application* app)
     estc_hsv_machine_init(&app->hsv_machine, &led_color, PWM_VALUE_MAX, 
         hsv_machine_toggle_mode_handler, app );
 
-    estc_uart_term_init(&app->uart_term, terminal_command_handler, app);
+    estc_uart_term_init(terminal_command_handler, app);
     
     app->sequence.values.p_individual = &app->duty_cycle_values;
     app->sequence.length = NRF_PWM_VALUES_LENGTH(app->duty_cycle_values);
@@ -271,7 +271,7 @@ void application_next_tick(Application* app)
 {
     estc_button_process_update(&app->button);
     estc_hsv_machine_next_state(&app->hsv_machine);
-    estc_uart_term_process_events(&app->uart_term);
+    estc_uart_term_process_events();
 }
 
 void application_lock(Application* app)
