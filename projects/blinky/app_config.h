@@ -30,6 +30,7 @@
 #ifndef APP_CONFIG_H
 #define APP_CONFIG_H
 
+
 #ifndef CLI_SUPPORT
 #define CLI_SUPPORT 1
 #endif
