@@ -81,7 +81,7 @@
 #include "nrf_log_backend_usb.h"
 
 
-#define DEVICE_NAME                     "ESTC"                                  /**< Name of device. Will be included in the advertising data. */
+#define DEVICE_NAME                     "SviridovAndreyAlexandrovich"           /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
 #define APP_ADV_INTERVAL                300                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 
@@ -106,11 +106,6 @@ NRF_BLE_QWR_DEF(m_qwr);                                                         
 BLE_ADVERTISING_DEF(m_advertising);                                             /**< Advertising module instance. */
 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        /**< Handle of the current connection. */
-
-static ble_uuid_t m_adv_uuids[] =                                               /**< Universally unique service identifiers. */
-{
-    {BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE}
-};
 
 
 static void advertising_start(void);
@@ -154,6 +149,7 @@ static void gap_params_init(void)
     ret_code_t              err_code;
     ble_gap_conn_params_t   gap_conn_params;
     ble_gap_conn_sec_mode_t sec_mode;
+    //int a = BLE_GAP_DEVNAME_MAX_LEN;
 
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&sec_mode);
 
@@ -425,16 +421,21 @@ static void advertising_init(void)
     memset(&init, 0, sizeof(init));
 
     init.advdata.name_type               = BLE_ADVDATA_FULL_NAME;
-    init.advdata.include_appearance      = true;
-    init.advdata.flags                   = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
-    init.advdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
-    init.advdata.uuids_complete.p_uuids  = m_adv_uuids;
+    init.advdata.include_appearance      = false;
+    init.advdata.flags                   = 0;
+    init.advdata.uuids_complete.uuid_cnt = 0;
 
     init.config.ble_adv_fast_enabled  = true;
     init.config.ble_adv_fast_interval = APP_ADV_INTERVAL;
     init.config.ble_adv_fast_timeout  = APP_ADV_DURATION;
 
     // TODO: Add more data to the advertisement data
+    //ble_advdata_manuf_data_t manuf_specific_data;
+   
+    //manuf_specific_data.data.p_data = my_info_buf;
+    //manuf_specific_data.data.size   = sizeof(my_info_buf);
+    //init.advdata.p_manuf_specific_data = &manuf_specific_data;
+
     // TODO: Add more data to the scan response data
 
     init.evt_handler = on_adv_evt;
