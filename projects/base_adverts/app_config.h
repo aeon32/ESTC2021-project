@@ -74,6 +74,9 @@
 #endif
 // </e>
 
+#ifndef NRF_LOG_BACKEND_USB_ENABLED
+#define NRF_LOG_BACKEND_USB_ENABLED 1
+#endif
 
 // <e> LOG_BACKEND_USB_ENABLED - log_backend_usb - Log USB backend
 //==========================================================

@@ -310,6 +310,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
 {
     ret_code_t err_code = NRF_SUCCESS;
 
+
     switch (p_ble_evt->header.evt_id)
     {
         case BLE_GAP_EVT_DISCONNECTED:
@@ -421,22 +422,25 @@ static void advertising_init(void)
     memset(&init, 0, sizeof(init));
 
     init.advdata.name_type               = BLE_ADVDATA_FULL_NAME;
+    //Exclude all fields from advert message, except "Complete Local Name"
     init.advdata.include_appearance      = false;
     init.advdata.flags                   = 0;
     init.advdata.uuids_complete.uuid_cnt = 0;
-
+    
+    /*
+    init.advdata.include_appearance      = true;
+    init.advdata.flags                   = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
+    init.advdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
+    init.advdata.uuids_complete.p_uuids  = m_adv_uuids;
+    */
     init.config.ble_adv_fast_enabled  = true;
     init.config.ble_adv_fast_interval = APP_ADV_INTERVAL;
     init.config.ble_adv_fast_timeout  = APP_ADV_DURATION;
 
-    // TODO: Add more data to the advertisement data
     //ble_advdata_manuf_data_t manuf_specific_data;
    
-    //manuf_specific_data.data.p_data = my_info_buf;
-    //manuf_specific_data.data.size   = sizeof(my_info_buf);
-    //init.advdata.p_manuf_specific_data = &manuf_specific_data;
-
-    // TODO: Add more data to the scan response data
+    // Handle scan response data too...
+    init.srdata.name_type = BLE_ADVDATA_FULL_NAME;
 
     init.evt_handler = on_adv_evt;
 
@@ -490,11 +494,8 @@ static void power_management_init(void)
  */
 static void idle_state_handle(void)
 {
-    if (NRF_LOG_PROCESS() == false)
-    {
-        nrf_pwr_mgmt_run();
-    }
-	LOG_BACKEND_USB_PROCESS();
+    LOG_BACKEND_USB_PROCESS();
+    NRF_LOG_PROCESS();
 }
 
 
