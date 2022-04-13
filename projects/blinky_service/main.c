@@ -82,7 +82,7 @@
 
 #include "estc_service.h"
 
-#define DEVICE_NAME                     "ESTC-SVC"                              /**< Name of device. Will be included in the advertising data. */
+#define DEVICE_NAME                     "ESTColour"                                /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
 #define APP_ADV_INTERVAL                300                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 
@@ -109,8 +109,9 @@ static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        
 
 static ble_uuid_t m_adv_uuids[] =                                               /**< Universally unique service identifiers. */
 {
-    {BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE},
-    // TODO: 5. Add ESTC service UUID to the table
+    {BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE}, 
+    {ESTC_SERVICE_UUID, BLE_UUID_TYPE_VENDOR_BEGIN },
+
 };
 
 ble_estc_service_t m_estc_service; /**< ESTC example BLE service */
@@ -215,6 +216,15 @@ static void services_init(void)
 
     err_code = estc_ble_service_init(&m_estc_service);
     APP_ERROR_CHECK(err_code);
+
+    uint32_t deadbeef = DEAD_BEEF;
+    memcpy(m_estc_service.char_value, &deadbeef, sizeof(deadbeef) );
+
+    // Add characteristics
+    err_code = estc_ble_add_hsv_characteristics(&m_estc_service);
+    APP_ERROR_CHECK(err_code);
+
+
 }
 
 
