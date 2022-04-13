@@ -36,16 +36,32 @@
 #include "ble.h"
 #include "sdk_errors.h"
 
-//#define ESTC_BASE_UUID {0xCB, 0x66, 0xE2, 0x0C, 0x51, 0x74, /* - */ 0x42, 0xB5, /* - */ 0x41, 0x4D, /* - */, 0x7A, 0x79, /* - */, 0x2B, 0x08, 0xCC, 0x15 }
-#define ESTC_BASE_UUID {0x57,0xB7, 0xA8, 0xBF, 0xB0, 0x78, 0x21, 0x43, 0xA6, 0x71, 0x16, 0x88, 0x7B, 0x39, 0xA4, 0x64}
+
+#define ESTC_BASE_UUID {0x57,0xB7, 0xA8, 0xBF, 0xB0, 0x78, 0x21, 0x43, 0xA6, 0x71, 0x16, 0x88, 0x12, 0x04, 0xA4, 0x64}
 #define ESTC_SERVICE_UUID  0x1204 
 
+#define ESTC_GATT_BLINKY_HSV_CHAR 0x1205
+#define ESTC_GATT_BLINKY_HSV_CHAR_LEN 12
 
 typedef struct
 {
     uint16_t service_handle;
+    uint16_t connection_handle;
+    ble_uuid_t service_uuid;
+    uint8_t char_value[ESTC_GATT_BLINKY_HSV_CHAR_LEN];
+    ble_gatts_char_handles_t char_handles;
+
 } ble_estc_service_t;
 
+
+/**
+ *  Adds service to ble stack
+**/
 ret_code_t estc_ble_service_init(ble_estc_service_t *service);
+
+/**
+ *  Adds blinky HSV characteristics to service
+**/
+ret_code_t estc_ble_add_hsv_characteristics(ble_estc_service_t *service);
 
 #endif /* ESTC_SERVICE_H__ */
