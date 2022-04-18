@@ -218,12 +218,23 @@ static void services_init(void)
     APP_ERROR_CHECK(err_code);
 
     uint32_t deadbeef = DEAD_BEEF;
-    memcpy(m_estc_service.char_value, &deadbeef, sizeof(deadbeef) );
+    memcpy(m_estc_service.hsv_char_value, &deadbeef, sizeof(deadbeef) );
 
-    // Add characteristics
-    err_code = estc_ble_add_hsv_characteristics(&m_estc_service);
+    uint32_t rgb_value = 0xAABBCCDD;
+    memcpy(m_estc_service.rgb_char_value, &rgb_value, sizeof(rgb_value) );
+
+
+
+    // Add characteristics, write/read and readonly
+    err_code = estc_ble_add_characteristic(&m_estc_service, ESTC_GATT_BLINKY_HSV_CHAR, 
+                                           "HSV colour value", m_estc_service.hsv_char_value, 
+                                           ESTC_GATT_BLINKY_HSV_CHAR_LEN, false, &m_estc_service.hsv_char_handle);
     APP_ERROR_CHECK(err_code);
 
+    err_code = estc_ble_add_characteristic(&m_estc_service, ESTC_GATT_BLINKY_RGB_CHAR, 
+                                           "RGB colour value", m_estc_service.rgb_char_value, 
+                                           ESTC_GATT_BLINKY_RGB_CHAR_LEN, true, &m_estc_service.rgb_char_handle);
+    APP_ERROR_CHECK(err_code);
 
 }
 
