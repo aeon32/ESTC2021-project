@@ -32,6 +32,7 @@
 #define ESTC_SERVICE_H__
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "ble.h"
 #include "sdk_errors.h"
@@ -43,13 +44,20 @@
 #define ESTC_GATT_BLINKY_HSV_CHAR 0x1205
 #define ESTC_GATT_BLINKY_HSV_CHAR_LEN 12
 
+#define ESTC_GATT_BLINKY_RGB_CHAR 0x1206
+#define ESTC_GATT_BLINKY_RGB_CHAR_LEN 18
+
 typedef struct
 {
     uint16_t service_handle;
     uint16_t connection_handle;
     ble_uuid_t service_uuid;
-    uint8_t char_value[ESTC_GATT_BLINKY_HSV_CHAR_LEN];
-    ble_gatts_char_handles_t char_handles;
+    uint8_t hsv_char_value[ESTC_GATT_BLINKY_HSV_CHAR_LEN];
+    ble_gatts_char_handles_t hsv_char_handle;
+    
+    uint8_t rgb_char_value[ESTC_GATT_BLINKY_RGB_CHAR_LEN];
+    ble_gatts_char_handles_t rgb_char_handle;
+
 
 } ble_estc_service_t;
 
@@ -63,5 +71,13 @@ ret_code_t estc_ble_service_init(ble_estc_service_t *service);
  *  Adds blinky HSV characteristics to service
 **/
 ret_code_t estc_ble_add_hsv_characteristics(ble_estc_service_t *service);
+
+/**
+ *  Adds characteristic
+**/
+ret_code_t estc_ble_add_characteristic(ble_estc_service_t *service, uint16_t char_id,
+                                       const char * description,
+                                       uint8_t * char_data, uint16_t char_data_size,
+                                       bool read_only, ble_gatts_char_handles_t * out_char_handle);
 
 #endif /* ESTC_SERVICE_H__ */
