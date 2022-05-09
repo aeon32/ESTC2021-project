@@ -105,7 +105,13 @@ NRF_BLE_GATT_DEF(m_gatt);                                                       
 NRF_BLE_QWR_DEF(m_qwr);                                                         /**< Context for the Queued Write module.*/
 BLE_ADVERTISING_DEF(m_advertising);                                             /**< Advertising module instance. */
 
+#define APP_CFG_CHAR_NOTIF_TIMEOUT  1000                                         /**< Notifications period (in milli seconds). */  
+
+//APP_TIMER_DEF(m_indication_timer_id);                                         /**< Indication timer. */
+APP_TIMER_DEF(m_notif_timer_id);                                                /**< Notification timer. */
+
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        /**< Handle of the current connection. */
+
 
 static ble_uuid_t m_adv_uuids[] =                                               /**< Universally unique service identifiers. */
 {
@@ -135,6 +141,26 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
     app_error_handler(DEAD_BEEF, line_num, p_file_name);
 }
 
+
+/**
+ * Function fo sending notifies using timeouts
+ *
+ */
+
+static void notification_interval_timeout_handler(void * p_context)
+{
+    UNUSED_PARAMETER(p_context);
+    NRF_LOG_INFO("Notify timeout");
+    m_estc_service.notify_char_value++;
+
+    if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
+    {
+       estc_char_notify(m_conn_handle, &m_estc_service.notify_char_handle, 
+                    (uint8_t *) &m_estc_service.notify_char_value, sizeof(m_estc_service.notify_char_value) );
+    }
+
+}
+
 /**@brief Function for the Timer initialization.
  *
  * @details Initializes the timer module. This creates and starts application timers.
@@ -144,6 +170,10 @@ static void timers_init(void)
     // Initialize timer module.
     ret_code_t err_code = app_timer_init();
     APP_ERROR_CHECK(err_code);
+
+    err_code = app_timer_create(&m_notif_timer_id,
+                                APP_TIMER_MODE_REPEATED,
+                                notification_interval_timeout_handler);
 }
 
 
@@ -311,6 +341,9 @@ static void conn_params_init(void)
  */
 static void application_timers_start(void)
 {
+    ret_code_t err_code;
+    err_code = app_timer_start(m_notif_timer_id, APP_TIMER_TICKS(APP_CFG_CHAR_NOTIF_TIMEOUT), NULL);
+    APP_ERROR_CHECK(err_code);
 }
 
 
@@ -389,6 +422,8 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
             err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
             APP_ERROR_CHECK(err_code);
+
+            application_timers_start();
             break;
 
         case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
@@ -587,7 +622,7 @@ int main(void)
 
     // Start execution.
     NRF_LOG_INFO("ESTC GATT service example started");
-    application_timers_start();
+
 
     advertising_start();
 

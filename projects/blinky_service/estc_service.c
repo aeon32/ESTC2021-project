@@ -42,7 +42,7 @@ ret_code_t estc_ble_service_init(ble_estc_service_t *service)
 {
     ret_code_t error_code = NRF_SUCCESS;
     memset(service, 0, sizeof(ble_estc_service_t));
-    
+     
     
     ble_uuid128_t m_base_uuid128 = {ESTC_BASE_UUID};
     service->service_uuid.uuid = ESTC_SERVICE_UUID;
@@ -81,6 +81,8 @@ ret_code_t estc_ble_add_characteristic(ble_estc_service_t *service, uint16_t cha
     ble_gatts_char_md_t char_md = { 0 };
     char_md.char_props.read   =  flags & ESTC_CHAR_READ ? 1 : 0;
     char_md.char_props.write = flags & ESTC_CHAR_WRITE ? 1 : 0;
+    char_md.char_props.notify = flags & ESTC_CHAR_NOTIFY ? 1 : 0;
+    char_md.char_props.indicate = flags & ESTC_CHAR_INDICATE ? 1 : 0;
     
     char_md.p_char_user_desc = (uint8_t *) description;
     char_md.char_user_desc_max_size = char_md.char_user_desc_size = strlen(description);
@@ -110,7 +112,7 @@ ret_code_t estc_ble_add_characteristic(ble_estc_service_t *service, uint16_t cha
     return NRF_SUCCESS;
 }
 
-ret_code_t estc_char_notify(ble_estc_service_t *service ,ble_gatts_char_handles_t * char_handle,
+ret_code_t estc_char_notify(uint16_t connection_handle, ble_gatts_char_handles_t * char_handle,
                             uint8_t * data, uint16_t data_len )
 {
     ble_gatts_hvx_params_t hvx_params = {0};
@@ -124,13 +126,14 @@ ret_code_t estc_char_notify(ble_estc_service_t *service ,ble_gatts_char_handles_
     hvx_params.p_len  = &len;
     hvx_params.p_data = data;
 
-    err_code = sd_ble_gatts_hvx(service->connection_handle, &hvx_params);
+    err_code = sd_ble_gatts_hvx(connection_handle, &hvx_params);
     if ((err_code != NRF_SUCCESS) &&
         (err_code != NRF_ERROR_INVALID_STATE) &&
         (err_code != NRF_ERROR_RESOURCES) &&
         (err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING))
     {
-        APP_ERROR_HANDLER(err_code);
+        //APP_ERROR_HANDLER(err_code);
+        NRF_LOG_ERROR("hvx error %d", err_code);
     }
 
     return NRF_SUCCESS;

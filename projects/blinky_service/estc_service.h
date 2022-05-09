@@ -53,7 +53,6 @@
 typedef struct
 {
     uint16_t service_handle;
-    uint16_t connection_handle;
     ble_uuid_t service_uuid;
     uint8_t hsv_char_value[ESTC_GATT_BLINKY_HSV_CHAR_LEN];
     ble_gatts_char_handles_t hsv_char_handle;
@@ -99,7 +98,7 @@ ret_code_t estc_ble_add_characteristic(ble_estc_service_t *service, uint16_t cha
  * Sends characteristics notification
  */
 
-ret_code_t estc_char_notify(ble_estc_service_t *service ,ble_gatts_char_handles_t * char_handle,
+ret_code_t estc_char_notify(uint16_t connection_handle ,ble_gatts_char_handles_t * char_handle,
                             uint8_t * data, uint16_t data_len );                                       
 
 #endif /* ESTC_SERVICE_H__ */
