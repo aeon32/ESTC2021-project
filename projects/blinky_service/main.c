@@ -228,13 +228,26 @@ static void services_init(void)
     // Add characteristics, write/read and readonly
     err_code = estc_ble_add_characteristic(&m_estc_service, ESTC_GATT_BLINKY_HSV_CHAR, 
                                            "HSV colour value", m_estc_service.hsv_char_value, 
-                                           ESTC_GATT_BLINKY_HSV_CHAR_LEN, false, &m_estc_service.hsv_char_handle);
+                                           ESTC_GATT_BLINKY_HSV_CHAR_LEN, ESTC_CHAR_READ | ESTC_CHAR_WRITE, &m_estc_service.hsv_char_handle);
     APP_ERROR_CHECK(err_code);
 
     err_code = estc_ble_add_characteristic(&m_estc_service, ESTC_GATT_BLINKY_RGB_CHAR, 
                                            "RGB colour value", m_estc_service.rgb_char_value, 
-                                           ESTC_GATT_BLINKY_RGB_CHAR_LEN, true, &m_estc_service.rgb_char_handle);
+                                           ESTC_GATT_BLINKY_RGB_CHAR_LEN, ESTC_CHAR_READ, &m_estc_service.rgb_char_handle);
     APP_ERROR_CHECK(err_code);
+
+
+        // Add characteristics, indicate and notify
+    err_code = estc_ble_add_characteristic(&m_estc_service, ESTC_GATT_BLINKY_INDICATE_CHAR, 
+                                           "Indicate char ", (uint8_t *) &m_estc_service.indicate_char_value, 
+                                           sizeof(m_estc_service.indicate_char_value), ESTC_CHAR_READ | ESTC_CHAR_INDICATE, &m_estc_service.indicate_char_handle);
+    APP_ERROR_CHECK(err_code);
+
+    err_code = estc_ble_add_characteristic(&m_estc_service, ESTC_GATT_BLINKY_NOTIFY_CHAR, 
+                                           "Notify char", (uint8_t *) &m_estc_service.notify_char_value,
+                                           sizeof(m_estc_service.notify_char_value), ESTC_CHAR_READ | ESTC_CHAR_NOTIFY, &m_estc_service.notify_char_handle);
+    APP_ERROR_CHECK(err_code);
+
 
 }
 
