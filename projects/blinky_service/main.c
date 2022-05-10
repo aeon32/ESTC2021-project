@@ -105,9 +105,10 @@ NRF_BLE_GATT_DEF(m_gatt);                                                       
 NRF_BLE_QWR_DEF(m_qwr);                                                         /**< Context for the Queued Write module.*/
 BLE_ADVERTISING_DEF(m_advertising);                                             /**< Advertising module instance. */
 
-#define APP_CFG_CHAR_NOTIF_TIMEOUT  1000                                         /**< Notifications period (in milli seconds). */  
+#define APP_CFG_CHAR_NOTIF_TIMEOUT  1000                                        /**< Notifications period (in milli seconds). */  
+#define APP_CFG_CHAR_INDICATE_TIMEOUT  2500                                     /**< Indications period (in milli seconds). */  
 
-//APP_TIMER_DEF(m_indication_timer_id);                                         /**< Indication timer. */
+APP_TIMER_DEF(m_indication_timer_id);                                         /**< Indication timer. */
 APP_TIMER_DEF(m_notif_timer_id);                                                /**< Notification timer. */
 
 static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        /**< Handle of the current connection. */
@@ -158,6 +159,24 @@ static void notification_interval_timeout_handler(void * p_context)
        estc_char_notify(m_conn_handle, &m_estc_service.notify_char_handle, 
                     (uint8_t *) &m_estc_service.notify_char_value, sizeof(m_estc_service.notify_char_value) );
     }
+}
+
+/**
+ * Function fo sending indication using timeouts
+ *
+ */
+
+static void indicate_interval_timeout_handler(void * p_context)
+{
+    UNUSED_PARAMETER(p_context);
+    NRF_LOG_INFO("Indicate timeout");
+    m_estc_service.indicate_char_value++;
+
+    if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
+    {
+       estc_char_indicate(m_conn_handle, &m_estc_service.indicate_char_handle, 
+                    (uint8_t *) &m_estc_service.indicate_char_value, sizeof(m_estc_service.indicate_char_value) );
+    }
 
 }
 
@@ -174,7 +193,15 @@ static void timers_init(void)
     err_code = app_timer_create(&m_notif_timer_id,
                                 APP_TIMER_MODE_REPEATED,
                                 notification_interval_timeout_handler);
+
+    APP_ERROR_CHECK(err_code);                                
+
+    err_code = app_timer_create(&m_indication_timer_id,
+                                APP_TIMER_MODE_REPEATED,
+                                indicate_interval_timeout_handler);
+    APP_ERROR_CHECK(err_code);                                 
 }
+
 
 
 /**@brief Function for the GAP initialization.
@@ -344,8 +371,21 @@ static void application_timers_start(void)
     ret_code_t err_code;
     err_code = app_timer_start(m_notif_timer_id, APP_TIMER_TICKS(APP_CFG_CHAR_NOTIF_TIMEOUT), NULL);
     APP_ERROR_CHECK(err_code);
+
+    err_code = app_timer_start(m_indication_timer_id, APP_TIMER_TICKS(APP_CFG_CHAR_INDICATE_TIMEOUT), NULL);
+    APP_ERROR_CHECK(err_code);
 }
 
+
+static void application_timers_stop(void)
+{
+    ret_code_t err_code;
+    err_code = app_timer_stop(m_notif_timer_id);
+    APP_ERROR_CHECK(err_code);
+
+    err_code = app_timer_stop(m_indication_timer_id);
+    APP_ERROR_CHECK(err_code);
+}
 
 /**@brief Function for putting the chip into sleep mode.
  *
@@ -411,6 +451,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
         case BLE_GAP_EVT_DISCONNECTED:
             NRF_LOG_INFO("Disconnected (conn_handle: %d)", p_ble_evt->evt.gap_evt.conn_handle);
             // LED indication will be changed when advertising starts.
+            application_timers_stop();
             break;
 
         case BLE_GAP_EVT_CONNECTED:

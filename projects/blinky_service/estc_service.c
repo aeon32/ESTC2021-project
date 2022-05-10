@@ -132,9 +132,35 @@ ret_code_t estc_char_notify(uint16_t connection_handle, ble_gatts_char_handles_t
         (err_code != NRF_ERROR_RESOURCES) &&
         (err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING))
     {
-        //APP_ERROR_HANDLER(err_code);
-        NRF_LOG_ERROR("hvx error %d", err_code);
+        APP_ERROR_HANDLER(err_code);
     }
 
     return NRF_SUCCESS;
-}                         
+}   
+
+ret_code_t estc_char_indicate(uint16_t connection_handle ,ble_gatts_char_handles_t * char_handle,
+                            uint8_t * data, uint16_t data_len )\
+{
+ble_gatts_hvx_params_t hvx_params = {0};
+    ret_code_t err_code;
+
+    uint16_t len = data_len;
+
+    hvx_params.handle = char_handle->value_handle;
+    hvx_params.type   = BLE_GATT_HVX_INDICATION;
+    hvx_params.offset = 0;
+    hvx_params.p_len  = &len;
+    hvx_params.p_data = data;
+
+    err_code = sd_ble_gatts_hvx(connection_handle, &hvx_params);
+    if ((err_code != NRF_SUCCESS) &&
+        (err_code != NRF_ERROR_INVALID_STATE) &&
+        (err_code != NRF_ERROR_RESOURCES) &&
+        (err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING))
+    {
+        APP_ERROR_HANDLER(err_code);
+    }
+
+    return NRF_SUCCESS;    
+
+}                        

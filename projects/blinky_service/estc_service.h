@@ -99,6 +99,13 @@ ret_code_t estc_ble_add_characteristic(ble_estc_service_t *service, uint16_t cha
  */
 
 ret_code_t estc_char_notify(uint16_t connection_handle ,ble_gatts_char_handles_t * char_handle,
-                            uint8_t * data, uint16_t data_len );                                       
+                            uint8_t * data, uint16_t data_len );    
+
+/**
+ * Sends characteristics indicate
+ */
+
+ret_code_t estc_char_indicate(uint16_t connection_handle ,ble_gatts_char_handles_t * char_handle,
+                            uint8_t * data, uint16_t data_len );                                                                  
 
 #endif /* ESTC_SERVICE_H__ */
