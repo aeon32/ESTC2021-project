@@ -47,16 +47,23 @@
 #define ESTC_GATT_BLINKY_RGB_CHAR 0x1206
 #define ESTC_GATT_BLINKY_RGB_CHAR_LEN 18
 
+#define ESTC_GATT_BLINKY_INDICATE_CHAR 0x1207
+#define ESTC_GATT_BLINKY_NOTIFY_CHAR 0x1208
+
 typedef struct
 {
     uint16_t service_handle;
-    uint16_t connection_handle;
     ble_uuid_t service_uuid;
     uint8_t hsv_char_value[ESTC_GATT_BLINKY_HSV_CHAR_LEN];
     ble_gatts_char_handles_t hsv_char_handle;
     
     uint8_t rgb_char_value[ESTC_GATT_BLINKY_RGB_CHAR_LEN];
     ble_gatts_char_handles_t rgb_char_handle;
+
+    uint32_t indicate_char_value;
+    ble_gatts_char_handles_t indicate_char_handle;
+    uint32_t notify_char_value;
+    ble_gatts_char_handles_t notify_char_handle;
 
 
 } ble_estc_service_t;
@@ -68,16 +75,37 @@ typedef struct
 ret_code_t estc_ble_service_init(ble_estc_service_t *service);
 
 /**
- *  Adds blinky HSV characteristics to service
-**/
-ret_code_t estc_ble_add_hsv_characteristics(ble_estc_service_t *service);
+ * ESTC service characteristics traits
+ * 
+ */
+enum ESTC_CHAR_FLAGS
+{
+    ESTC_CHAR_READ = 1,
+    ESTC_CHAR_WRITE = 2,
+    ESTC_CHAR_NOTIFY = 4,
+    ESTC_CHAR_INDICATE = 8
+};
 
 /**
- *  Adds characteristic
+ *  Adds characteristic to service
 **/
 ret_code_t estc_ble_add_characteristic(ble_estc_service_t *service, uint16_t char_id,
                                        const char * description,
                                        uint8_t * char_data, uint16_t char_data_size,
-                                       bool read_only, ble_gatts_char_handles_t * out_char_handle);
+                                       uint32_t flags, ble_gatts_char_handles_t * out_char_handle);
+
+/**
+ * Sends characteristics notification
+ */
+
+ret_code_t estc_char_notify(uint16_t connection_handle ,ble_gatts_char_handles_t * char_handle,
+                            uint8_t * data, uint16_t data_len );    
+
+/**
+ * Sends characteristics indicate
+ */
+
+ret_code_t estc_char_indicate(uint16_t connection_handle ,ble_gatts_char_handles_t * char_handle,
+                            uint8_t * data, uint16_t data_len );                                                                  
 
 #endif /* ESTC_SERVICE_H__ */

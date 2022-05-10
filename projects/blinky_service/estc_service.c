@@ -42,7 +42,7 @@ ret_code_t estc_ble_service_init(ble_estc_service_t *service)
 {
     ret_code_t error_code = NRF_SUCCESS;
     memset(service, 0, sizeof(ble_estc_service_t));
-    
+     
     
     ble_uuid128_t m_base_uuid128 = {ESTC_BASE_UUID};
     service->service_uuid.uuid = ESTC_SERVICE_UUID;
@@ -62,56 +62,13 @@ ret_code_t estc_ble_service_init(ble_estc_service_t *service)
     return NRF_SUCCESS;
 }
 
-
-
-ret_code_t estc_ble_add_hsv_characteristics(ble_estc_service_t *service)
-{
-    const char * char_descr = "Colour led HSV values";
-    ret_code_t error_code = NRF_SUCCESS;
-
-    ble_uuid_t          char_uuid = {0};
-    char_uuid.uuid = ESTC_GATT_BLINKY_HSV_CHAR;
-    char_uuid.type = service->service_uuid.type;
-
-    // Configure Characteristic metadata (enable read and write)
-    ble_gatts_char_md_t char_md = { 0 };
-    char_md.char_props.read   = 1;
-    char_md.char_props.write = 1;
-    char_md.p_char_user_desc = (uint8_t *) char_descr;
-    char_md.char_user_desc_max_size = char_md.char_user_desc_size = strlen(char_descr);
-
-    // Configures attribute metadata. For now we only specify that the attribute will be stored in the softdevice
-    ble_gatts_attr_md_t attr_md = { 0 };
-    attr_md.vloc = BLE_GATTS_VLOC_STACK;
-
-    // Set read/write security levels to our attribute metadata using `BLE_GAP_CONN_SEC_MODE_SET_OPEN`
-    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&attr_md.read_perm);
-    BLE_GAP_CONN_SEC_MODE_SET_OPEN(&attr_md.write_perm);
-
-
-    // Configure the characteristic value attribute (set the UUID and metadata)
-    ble_gatts_attr_t attr_char_value = { 0 };
-    attr_char_value.p_uuid    = &char_uuid;
-    attr_char_value.p_attr_md = &attr_md;
-    // Set characteristic length in number of bytes in attr_char_value structure
-    attr_char_value.init_len  = ESTC_GATT_BLINKY_HSV_CHAR_LEN;
-    attr_char_value.max_len   = ESTC_GATT_BLINKY_HSV_CHAR_LEN;
-    attr_char_value.p_value   = service->hsv_char_value;
-
-    // Add new characteristic to the service using 
-    error_code = sd_ble_gatts_characteristic_add(service->service_handle, &char_md, &attr_char_value,
-                                               &service->hsv_char_handle);
-    APP_ERROR_CHECK(error_code);
-    return NRF_SUCCESS;
-}
-
 /**
  *  Adds characteristic
 **/
 ret_code_t estc_ble_add_characteristic(ble_estc_service_t *service, uint16_t char_id,
                                        const char * description,
                                        uint8_t * char_data, uint16_t char_data_size,
-                                       bool read_only, ble_gatts_char_handles_t * out_char_handle)
+                                       uint32_t flags, ble_gatts_char_handles_t * out_char_handle)
 {
     
     ret_code_t error_code = NRF_SUCCESS;
@@ -122,8 +79,11 @@ ret_code_t estc_ble_add_characteristic(ble_estc_service_t *service, uint16_t cha
 
     // Configure Characteristic metadata (enable read and write)
     ble_gatts_char_md_t char_md = { 0 };
-    char_md.char_props.read   = 1;
-    char_md.char_props.write = 1 ? !read_only : 0;
+    char_md.char_props.read   =  flags & ESTC_CHAR_READ ? 1 : 0;
+    char_md.char_props.write = flags & ESTC_CHAR_WRITE ? 1 : 0;
+    char_md.char_props.notify = flags & ESTC_CHAR_NOTIFY ? 1 : 0;
+    char_md.char_props.indicate = flags & ESTC_CHAR_INDICATE ? 1 : 0;
+    
     char_md.p_char_user_desc = (uint8_t *) description;
     char_md.char_user_desc_max_size = char_md.char_user_desc_size = strlen(description);
 
@@ -151,3 +111,56 @@ ret_code_t estc_ble_add_characteristic(ble_estc_service_t *service, uint16_t cha
     APP_ERROR_CHECK(error_code);
     return NRF_SUCCESS;
 }
+
+ret_code_t estc_char_notify(uint16_t connection_handle, ble_gatts_char_handles_t * char_handle,
+                            uint8_t * data, uint16_t data_len )
+{
+    ble_gatts_hvx_params_t hvx_params = {0};
+    ret_code_t err_code;
+
+    uint16_t len = data_len;
+
+    hvx_params.handle = char_handle->value_handle;
+    hvx_params.type   = BLE_GATT_HVX_NOTIFICATION;
+    hvx_params.offset = 0;
+    hvx_params.p_len  = &len;
+    hvx_params.p_data = data;
+
+    err_code = sd_ble_gatts_hvx(connection_handle, &hvx_params);
+    if ((err_code != NRF_SUCCESS) &&
+        (err_code != NRF_ERROR_INVALID_STATE) &&
+        (err_code != NRF_ERROR_RESOURCES) &&
+        (err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING))
+    {
+        APP_ERROR_HANDLER(err_code);
+    }
+
+    return NRF_SUCCESS;
+}   
+
+ret_code_t estc_char_indicate(uint16_t connection_handle ,ble_gatts_char_handles_t * char_handle,
+                            uint8_t * data, uint16_t data_len )\
+{
+ble_gatts_hvx_params_t hvx_params = {0};
+    ret_code_t err_code;
+
+    uint16_t len = data_len;
+
+    hvx_params.handle = char_handle->value_handle;
+    hvx_params.type   = BLE_GATT_HVX_INDICATION;
+    hvx_params.offset = 0;
+    hvx_params.p_len  = &len;
+    hvx_params.p_data = data;
+
+    err_code = sd_ble_gatts_hvx(connection_handle, &hvx_params);
+    if ((err_code != NRF_SUCCESS) &&
+        (err_code != NRF_ERROR_INVALID_STATE) &&
+        (err_code != NRF_ERROR_RESOURCES) &&
+        (err_code != BLE_ERROR_GATTS_SYS_ATTR_MISSING))
+    {
+        APP_ERROR_HANDLER(err_code);
+    }
+
+    return NRF_SUCCESS;    
+
+}                        
