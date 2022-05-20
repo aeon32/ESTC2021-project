@@ -38,15 +38,14 @@
 #include "ble_srv_common.h"
 
 
-ret_code_t estc_ble_service_init(ble_estc_service_t *service)
+
+ret_code_t estc_ble_service_init(estc_ble_service_t *service, ble_uuid128_t * base_uuid128, uint16_t service_uuid )
 {
     ret_code_t error_code = NRF_SUCCESS;
-    memset(service, 0, sizeof(ble_estc_service_t));
-     
-    
-    ble_uuid128_t m_base_uuid128 = {ESTC_BASE_UUID};
-    service->service_uuid.uuid = ESTC_SERVICE_UUID;
-    error_code = sd_ble_uuid_vs_add(&m_base_uuid128, &service->service_uuid.type);
+    memset(service, 0, sizeof(estc_ble_service_t));
+
+    service->service_uuid.uuid = service_uuid ;
+    error_code = sd_ble_uuid_vs_add(base_uuid128, &service->service_uuid.type);
     APP_ERROR_CHECK(error_code);
 
     error_code = sd_ble_gatts_service_add(BLE_GATTS_SRVC_TYPE_PRIMARY, &service->service_uuid, &service->service_handle);
@@ -65,7 +64,7 @@ ret_code_t estc_ble_service_init(ble_estc_service_t *service)
 /**
  *  Adds characteristic
 **/
-ret_code_t estc_ble_add_characteristic(ble_estc_service_t *service, uint16_t char_id,
+ret_code_t estc_ble_add_characteristic(estc_ble_service_t *service, uint16_t char_id,
                                        const char * description,
                                        uint8_t * char_data, uint16_t char_data_size,
                                        uint32_t flags, ble_gatts_char_handles_t * out_char_handle)

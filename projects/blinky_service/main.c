@@ -81,10 +81,15 @@
 #include "nrf_log_backend_usb.h"
 
 #include "estc_service.h"
+#include "estc_ble.h"
 
 #define DEVICE_NAME                     "ESTColour"                                /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
 #define APP_ADV_INTERVAL                300                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
+
+
+#define ESTC_BASE_UUID {0x57,0xB7, 0xA8, 0xBF, 0xB0, 0x78, 0x21, 0x43, 0xA6, 0x71, 0x16, 0x88, 0x12, 0x04, 0xA4, 0x64}
+#define ESTC_SERVICE_UUID  0x1204 
 
 #define APP_ADV_DURATION                18000                                   /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
 #define APP_BLE_OBSERVER_PRIO           3                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
@@ -108,11 +113,8 @@ BLE_ADVERTISING_DEF(m_advertising);                                             
 #define APP_CFG_CHAR_NOTIF_TIMEOUT  1000                                        /**< Notifications period (in milli seconds). */  
 #define APP_CFG_CHAR_INDICATE_TIMEOUT  2500                                     /**< Indications period (in milli seconds). */  
 
-APP_TIMER_DEF(m_indication_timer_id);                                         /**< Indication timer. */
+APP_TIMER_DEF(m_indication_timer_id);                                           /**< Indication timer. */
 APP_TIMER_DEF(m_notif_timer_id);                                                /**< Notification timer. */
-
-static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;                        /**< Handle of the current connection. */
-
 
 static ble_uuid_t m_adv_uuids[] =                                               /**< Universally unique service identifiers. */
 {
@@ -121,7 +123,9 @@ static ble_uuid_t m_adv_uuids[] =                                               
 
 };
 
-ble_estc_service_t m_estc_service; /**< ESTC example BLE service */
+static uint16_t m_conn_handle = BLE_CONN_HANDLE_INVALID;    
+
+estc_ble_service_t m_estc_service; /**< ESTC example BLE service */
 
 static void advertising_start(void);
 
@@ -150,16 +154,15 @@ void assert_nrf_callback(uint16_t line_num, const uint8_t * p_file_name)
 
 static void notification_interval_timeout_handler(void * p_context)
 {
-    UNUSED_PARAMETER(p_context);
+    estc_ble_service_t * estc_service = (estc_ble_service_t * ) p_context;
     NRF_LOG_INFO("Notify timeout");
-    m_estc_service.notify_char_value++;
+    estc_service->notify_char_value++;
 
-    if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
-    {
-       estc_char_notify(m_conn_handle, &m_estc_service.notify_char_handle, 
-                    (uint8_t *) &m_estc_service.notify_char_value, sizeof(m_estc_service.notify_char_value) );
-    }
+    
+    estc_char_notify(m_conn_handle, &estc_service->notify_char_handle, 
+                    (uint8_t *) &estc_service->notify_char_value, sizeof(estc_service->notify_char_value) );
 }
+    
 
 /**
  * Function fo sending indication using timeouts
@@ -168,15 +171,13 @@ static void notification_interval_timeout_handler(void * p_context)
 
 static void indicate_interval_timeout_handler(void * p_context)
 {
-    UNUSED_PARAMETER(p_context);
+    estc_ble_service_t * estc_service = (estc_ble_service_t * ) p_context;
     NRF_LOG_INFO("Indicate timeout");
-    m_estc_service.indicate_char_value++;
+    estc_service->indicate_char_value++;
 
-    if (m_conn_handle != BLE_CONN_HANDLE_INVALID)
-    {
-       estc_char_indicate(m_conn_handle, &m_estc_service.indicate_char_handle, 
-                    (uint8_t *) &m_estc_service.indicate_char_value, sizeof(m_estc_service.indicate_char_value) );
-    }
+    estc_char_indicate(m_conn_handle, &estc_service->indicate_char_handle, 
+                    (uint8_t *) &estc_service->indicate_char_value, sizeof(estc_service->indicate_char_value) );
+
 
 }
 
@@ -271,7 +272,9 @@ static void services_init(void)
     err_code = nrf_ble_qwr_init(&m_qwr, &qwr_init);
     APP_ERROR_CHECK(err_code);
 
-    err_code = estc_ble_service_init(&m_estc_service);
+    ble_uuid128_t  base_uuid128 = {ESTC_BASE_UUID};
+
+    err_code = estc_ble_service_init(&m_estc_service, &base_uuid128, ESTC_SERVICE_UUID );
     APP_ERROR_CHECK(err_code);
 
     uint32_t deadbeef = DEAD_BEEF;
@@ -309,27 +312,6 @@ static void services_init(void)
 }
 
 
-/**@brief Function for handling the Connection Parameters Module.
- *
- * @details This function will be called for all events in the Connection Parameters Module which
- *          are passed to the application.
- *          @note All this function does is to disconnect. This could have been done by simply
- *                setting the disconnect_on_fail config parameter, but instead we use the event
- *                handler mechanism to demonstrate its use.
- *
- * @param[in] p_evt  Event received from the Connection Parameters Module.
- */
-static void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
-{
-    ret_code_t err_code;
-
-    if (p_evt->evt_type == BLE_CONN_PARAMS_EVT_FAILED)
-    {
-        err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_CONN_INTERVAL_UNACCEPTABLE);
-        APP_ERROR_CHECK(err_code);
-    }
-}
-
 
 /**@brief Function for handling a Connection Parameters error.
  *
@@ -355,8 +337,8 @@ static void conn_params_init(void)
     cp_init.next_conn_params_update_delay  = NEXT_CONN_PARAMS_UPDATE_DELAY;
     cp_init.max_conn_params_update_count   = MAX_CONN_PARAMS_UPDATE_COUNT;
     cp_init.start_on_notify_cccd_handle    = BLE_GATT_HANDLE_INVALID;
-    cp_init.disconnect_on_fail             = false;
-    cp_init.evt_handler                    = on_conn_params_evt;
+    cp_init.disconnect_on_fail             = true;
+    cp_init.evt_handler                    = NULL;
     cp_init.error_handler                  = conn_params_error_handler;
 
     err_code = ble_conn_params_init(&cp_init);
@@ -366,13 +348,13 @@ static void conn_params_init(void)
 
 /**@brief Function for starting timers.
  */
-static void application_timers_start(void)
+static void application_timers_start(estc_ble_service_t * service)
 {
     ret_code_t err_code;
-    err_code = app_timer_start(m_notif_timer_id, APP_TIMER_TICKS(APP_CFG_CHAR_NOTIF_TIMEOUT), NULL);
+    err_code = app_timer_start(m_notif_timer_id, APP_TIMER_TICKS(APP_CFG_CHAR_NOTIF_TIMEOUT), service);
     APP_ERROR_CHECK(err_code);
 
-    err_code = app_timer_start(m_indication_timer_id, APP_TIMER_TICKS(APP_CFG_CHAR_INDICATE_TIMEOUT), NULL);
+    err_code = app_timer_start(m_indication_timer_id, APP_TIMER_TICKS(APP_CFG_CHAR_INDICATE_TIMEOUT), service);
     APP_ERROR_CHECK(err_code);
 }
 
@@ -387,25 +369,6 @@ static void application_timers_stop(void)
     APP_ERROR_CHECK(err_code);
 }
 
-/**@brief Function for putting the chip into sleep mode.
- *
- * @note This function will not return.
- */
-static void sleep_mode_enter(void)
-{
-    ret_code_t err_code;
-
-    err_code = bsp_indication_set(BSP_INDICATE_IDLE);
-    APP_ERROR_CHECK(err_code);
-
-    // Prepare wakeup buttons.
-    err_code = bsp_btn_ble_sleep_mode_prepare();
-    APP_ERROR_CHECK(err_code);
-
-    // Go to system-off mode (this function will not return; wakeup will cause a reset).
-    err_code = sd_power_system_off();
-    APP_ERROR_CHECK(err_code);
-}
 
 
 /**@brief Function for handling advertising events.
@@ -428,7 +391,6 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt)
 
         case BLE_ADV_EVT_IDLE:
             NRF_LOG_INFO("ADV Event: idle, no connectable advertising is ongoing");
-            sleep_mode_enter();
             break;
 
         default:
@@ -464,7 +426,7 @@ static void ble_evt_handler(ble_evt_t const * p_ble_evt, void * p_context)
             err_code = nrf_ble_qwr_conn_handle_assign(&m_qwr, m_conn_handle);
             APP_ERROR_CHECK(err_code);
 
-            application_timers_start();
+            application_timers_start((estc_ble_service_t *) p_context);
             break;
 
         case BLE_GAP_EVT_PHY_UPDATE_REQUEST:
@@ -524,36 +486,9 @@ static void ble_stack_init(void)
     APP_ERROR_CHECK(err_code);
 
     // Register a handler for BLE events.
-    NRF_SDH_BLE_OBSERVER(m_ble_observer, APP_BLE_OBSERVER_PRIO, ble_evt_handler, NULL);
+    NRF_SDH_BLE_OBSERVER(m_ble_observer, APP_BLE_OBSERVER_PRIO, ble_evt_handler, &m_estc_service);
 }
 
-
-/**@brief Function for handling events from the BSP module.
- *
- * @param[in]   event   Event generated when button is pressed.
- */
-static void bsp_event_handler(bsp_event_t event)
-{
-    ret_code_t err_code;
-
-    switch (event)
-    {
-        case BSP_EVENT_SLEEP:
-            sleep_mode_enter();
-            break; // BSP_EVENT_SLEEP
-
-        case BSP_EVENT_DISCONNECT:
-            err_code = sd_ble_gap_disconnect(m_conn_handle,
-                                             BLE_HCI_REMOTE_USER_TERMINATED_CONNECTION);
-            if (err_code != NRF_ERROR_INVALID_STATE)
-            {
-                APP_ERROR_CHECK(err_code);
-            }
-            break; // BSP_EVENT_DISCONNECT
-        default:
-            break;
-    }
-}
 
 
 /**@brief Function for initializing the Advertising functionality.
@@ -593,7 +528,7 @@ static void buttons_leds_init(void)
 {
     ret_code_t err_code;
 
-    err_code = bsp_init(BSP_INIT_LEDS | BSP_INIT_BUTTONS, bsp_event_handler);
+    err_code = bsp_init(BSP_INIT_LEDS | BSP_INIT_BUTTONS, NULL);
     APP_ERROR_CHECK(err_code);
 
     err_code = bsp_btn_ble_init(NULL, NULL);
@@ -647,7 +582,7 @@ static void advertising_start(void)
 
 /**@brief Function for application main entry.
  */
-int main(void)
+int main2(void)
 {
     // Initialize.
     log_init();
@@ -674,6 +609,25 @@ int main(void)
     }
 }
 
+int main(void)
+{
+   log_init();
+   timers_init();
+   buttons_leds_init();
+   power_management_init();
+   //estc_ble_init(const char);
+   
+
+   // Start execution.
+   NRF_LOG_INFO("ESTC GATT service example started");
+
+    // Enter main loop.
+    for (;;)
+    {
+        idle_state_handle();
+    }
+
+}
 
 /**
  * @}

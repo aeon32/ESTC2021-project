@@ -38,9 +38,6 @@
 #include "sdk_errors.h"
 
 
-#define ESTC_BASE_UUID {0x57,0xB7, 0xA8, 0xBF, 0xB0, 0x78, 0x21, 0x43, 0xA6, 0x71, 0x16, 0x88, 0x12, 0x04, 0xA4, 0x64}
-#define ESTC_SERVICE_UUID  0x1204 
-
 #define ESTC_GATT_BLINKY_HSV_CHAR 0x1205
 #define ESTC_GATT_BLINKY_HSV_CHAR_LEN 12
 
@@ -54,6 +51,7 @@ typedef struct
 {
     uint16_t service_handle;
     ble_uuid_t service_uuid;
+    
     uint8_t hsv_char_value[ESTC_GATT_BLINKY_HSV_CHAR_LEN];
     ble_gatts_char_handles_t hsv_char_handle;
     
@@ -62,17 +60,18 @@ typedef struct
 
     uint32_t indicate_char_value;
     ble_gatts_char_handles_t indicate_char_handle;
+    
     uint32_t notify_char_value;
     ble_gatts_char_handles_t notify_char_handle;
 
 
-} ble_estc_service_t;
+} estc_ble_service_t;
 
 
 /**
  *  Adds service to ble stack
 **/
-ret_code_t estc_ble_service_init(ble_estc_service_t *service);
+ret_code_t estc_ble_service_init(estc_ble_service_t *service, ble_uuid128_t * base_uuid128, uint16_t service_uuid );
 
 /**
  * ESTC service characteristics traits
@@ -89,7 +88,7 @@ enum ESTC_CHAR_FLAGS
 /**
  *  Adds characteristic to service
 **/
-ret_code_t estc_ble_add_characteristic(ble_estc_service_t *service, uint16_t char_id,
+ret_code_t estc_ble_add_characteristic(estc_ble_service_t *service, uint16_t char_id,
                                        const char * description,
                                        uint8_t * char_data, uint16_t char_data_size,
                                        uint32_t flags, ble_gatts_char_handles_t * out_char_handle);
@@ -98,14 +97,14 @@ ret_code_t estc_ble_add_characteristic(ble_estc_service_t *service, uint16_t cha
  * Sends characteristics notification
  */
 
-ret_code_t estc_char_notify(uint16_t connection_handle ,ble_gatts_char_handles_t * char_handle,
+ret_code_t estc_char_notify(uint16_t connection_handle, ble_gatts_char_handles_t * char_handle,
                             uint8_t * data, uint16_t data_len );    
 
 /**
  * Sends characteristics indicate
  */
 
-ret_code_t estc_char_indicate(uint16_t connection_handle ,ble_gatts_char_handles_t * char_handle,
+ret_code_t estc_char_indicate(uint16_t connection_handle, ble_gatts_char_handles_t * char_handle,
                             uint8_t * data, uint16_t data_len );                                                                  
 
 #endif /* ESTC_SERVICE_H__ */
