@@ -8,21 +8,12 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef struct
-{
-    uint16_t conn_handle;
-
-} estc_ble_t;
-
-/**
- * @brief Single estc_ble_t instance
-**/
-extern estc_ble_t estc_ble;
+typedef struct estc_ble_struct estc_ble_t;
 
 /**
  * @brief ble initialization with default params
- * 
+ * returns pointer to filled estc_ble_t structure
  */
-void estc_ble_init(const char * deviceName, const char * manufacturer);
+estc_ble_t *  estc_ble_init(const char * deviceName, const char * manufacturer);
 
 #endif //ESTC_BLE_H__

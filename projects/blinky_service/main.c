@@ -507,6 +507,7 @@ static void advertising_init(void)
     init.advdata.uuids_complete.uuid_cnt = sizeof(m_adv_uuids) / sizeof(m_adv_uuids[0]);
     init.advdata.uuids_complete.p_uuids  = m_adv_uuids;
 
+
     init.config.ble_adv_fast_enabled  = true;
     init.config.ble_adv_fast_interval = APP_ADV_INTERVAL;
     init.config.ble_adv_fast_timeout  = APP_ADV_DURATION;
@@ -615,7 +616,7 @@ int main(void)
    timers_init();
    buttons_leds_init();
    power_management_init();
-   //estc_ble_init(const char);
+   estc_ble_init(DEVICE_NAME, MANUFACTURER_NAME);
    
 
    // Start execution.
