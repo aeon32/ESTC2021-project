@@ -17,7 +17,6 @@
 
 #define ESTC_BLE_APP_ADV_DURATION        18000                                   /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
 #define ESTC_BLE_APP_ADV_INTERVAL        300                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
-#define ESTC_BLE_OBSERVER_PRIO           3                                       /**< Application's BLE observer priority. You shouldn't need to modify this value. */
 #define ESTC_BLE_CONN_CFG_TAG            1                                       /**< A tag identifying the SoftDevice BLE configuration. */
 
 #define ESTC_FIRST_CONN_PARAMS_UPDATE_DELAY  APP_TIMER_TICKS(5000)                   /**< Time from initiating event (connect or start of notification) to first time sd_ble_gap_conn_param_update is called (5 seconds). */
@@ -35,6 +34,15 @@ NRF_BLE_QWR_DEF(m_queud_write);                                                 
 BLE_ADVERTISING_DEF(m_advertising);                                             /**< Advertising module instance. */
 
 estc_ble_t m_estc_ble = {0};
+
+/**@brief Function for handling an error.
+ *
+ * @param[in] nrf_error  Error code containing information about what went wrong.
+ */
+static void default_error_handler(uint32_t nrf_error)
+{
+    APP_ERROR_HANDLER(nrf_error);
+}
 
 /**@brief Function for handling BLE events.
  *
@@ -151,6 +159,15 @@ static void estc_softdevice_init()
     err_code = nrf_sdh_ble_enable(&ram_start);
     APP_ERROR_CHECK(err_code);
 
+
+     nrf_ble_qwr_init_t qwr_init = {0};
+
+    // Initialize Queued Write Module.
+    qwr_init.error_handler = default_error_handler;
+
+    err_code = nrf_ble_qwr_init(&m_queud_write, &qwr_init);
+    APP_ERROR_CHECK(err_code);
+
     // Register a handler for BLE events.
     NRF_SDH_BLE_OBSERVER(m_ble_observer, ESTC_BLE_OBSERVER_PRIO, ble_evt_handler, &m_estc_ble);    
 
@@ -223,16 +240,6 @@ static void estc_advertising_init()
     ble_advertising_conn_cfg_tag_set(&m_advertising, ESTC_BLE_CONN_CFG_TAG);
 }
 
-
-/**@brief Function for handling a Connection Parameters error.
- *
- * @param[in] nrf_error  Error code containing information about what went wrong.
- */
-static void estc_conn_params_error_handler(uint32_t nrf_error)
-{
-    APP_ERROR_HANDLER(nrf_error);
-}
-
 /**@brief Function for initializing the Connection Parameters module.
  */
 static void estc_conn_params_init(void)
@@ -249,7 +256,7 @@ static void estc_conn_params_init(void)
     cp_init.start_on_notify_cccd_handle    = BLE_GATT_HANDLE_INVALID;
     cp_init.disconnect_on_fail             = true;
     cp_init.evt_handler                    = NULL;
-    cp_init.error_handler                  = estc_conn_params_error_handler;
+    cp_init.error_handler                  = default_error_handler;
 
     err_code = ble_conn_params_init(&cp_init);
     APP_ERROR_CHECK(err_code);
@@ -261,12 +268,15 @@ estc_ble_t * estc_ble_init(const char * deviceName, const char * manufacturer)
     NRFX_ASSERT(!m_estc_ble.initialized);
 
     memset(&m_estc_ble, 0, sizeof(estc_ble_t));
+    m_estc_ble.conn_handle = BLE_CONN_HANDLE_INVALID;
     ble_uuid_t informServiceUUID = {BLE_UUID_DEVICE_INFORMATION_SERVICE, BLE_UUID_TYPE_BLE};
     m_estc_ble.advert_uuids[0] = informServiceUUID;
 
     estc_softdevice_init();
     estc_gap_params_init(deviceName);
     estc_gatt_init();
+
+    
     estc_conn_params_init();
     return &m_estc_ble;
 }
@@ -278,4 +288,9 @@ void estc_ble_start(estc_ble_t * estc_ble)
     ret_code_t err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
     APP_ERROR_CHECK(err_code);
 
+}
+
+uint16_t estc_ble_connection_handle(estc_ble_t * estc_ble)
+{
+    return estc_ble->conn_handle;
 }

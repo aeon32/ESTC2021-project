@@ -39,46 +39,19 @@
 #include <ble.h>
 
 
-#define ESTC_GATT_BLINKY_HSV_CHAR 0x1205
-#define ESTC_GATT_BLINKY_HSV_CHAR_LEN 12
-
-#define ESTC_GATT_BLINKY_RGB_CHAR 0x1206
-#define ESTC_GATT_BLINKY_RGB_CHAR_LEN 18
-
-#define ESTC_GATT_BLINKY_INDICATE_CHAR 0x1207
-#define ESTC_GATT_BLINKY_NOTIFY_CHAR 0x1208
-
 typedef struct
 {
+    estc_ble_t * estc_ble;
     uint16_t service_handle;
     ble_uuid_t service_uuid;
-    
-    uint8_t hsv_char_value[ESTC_GATT_BLINKY_HSV_CHAR_LEN];
-    ble_gatts_char_handles_t hsv_char_handle;
-    
-    uint8_t rgb_char_value[ESTC_GATT_BLINKY_RGB_CHAR_LEN];
-    ble_gatts_char_handles_t rgb_char_handle;
-
-    uint32_t indicate_char_value;
-    ble_gatts_char_handles_t indicate_char_handle;
-    
-    uint32_t notify_char_value;
-    ble_gatts_char_handles_t notify_char_handle;
-
 
 } estc_ble_service_t;
 
-
 /**
- *  Adds service to ble stack
-**/
-ret_code_t estc_ble_service_init(estc_ble_service_t *service, ble_uuid128_t * base_uuid128, uint16_t service_uuid );
-
-/**
- * @brief add service to ble stack
+ * @brief Initialize service instance, adds it to the stack
  * 
 **/
-ret_code_t estc_ble_service_add(estc_ble_service_t *service, estc_ble_t * estc_ble, ble_uuid128_t * base_uuid128, uint16_t service_uuid );
+ret_code_t estc_ble_service_init(estc_ble_service_t *service, estc_ble_t * estc_ble, ble_uuid128_t * base_uuid128, uint16_t service_uuid );
 
 /**
  * ESTC service characteristics traits
