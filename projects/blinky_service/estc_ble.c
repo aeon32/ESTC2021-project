@@ -1,4 +1,5 @@
 #include "estc_ble.h"
+#include "estc_ble_private.h"
 
 #include <nordic_common.h>
 #include <nrf.h>
@@ -23,28 +24,15 @@
 #define ESTC_NEXT_CONN_PARAMS_UPDATE_DELAY   APP_TIMER_TICKS(30000)                  /**< Time between each call to sd_ble_gap_conn_param_update after the first call (30 seconds). */
 #define ESTC_MAX_CONN_PARAMS_UPDATE_COUNT    3                                       /**< Number of attempts before giving up the connection parameter negotiation. */
 
-
 //Generic access parameters
 #define ESTC_MIN_CONN_INTERVAL               MSEC_TO_UNITS(100, UNIT_1_25_MS)        /**< Minimum acceptable connection interval (0.1 seconds). */
 #define ESTC_MAX_CONN_INTERVAL               MSEC_TO_UNITS(200, UNIT_1_25_MS)        /**< Maximum acceptable connection interval (0.2 second). */
 #define ESTC_SLAVE_LATENCY                   0                                       /**< Slave latency. */
 #define ESTC_CONN_SUP_TIMEOUT                MSEC_TO_UNITS(4000, UNIT_10_MS)         /**< Connection supervisory timeout (4 seconds). */
 
-#define ESTC_MAX_SERVICES_COUNT 1
-
 NRF_BLE_GATT_DEF(m_gatt);                                                       /**< GATT module instance. */
 NRF_BLE_QWR_DEF(m_queud_write);                                                 /**< Context for the Queued Write module.*/
 BLE_ADVERTISING_DEF(m_advertising);                                             /**< Advertising module instance. */
-
-typedef struct estc_ble_struct
-{
-    bool initialized;
-    uint16_t conn_handle;
-    ble_uuid_t advert_uuids[ESTC_MAX_SERVICES_COUNT + 1];
-    uint16_t services_count;
-
-} estc_ble_t;
-
 
 estc_ble_t m_estc_ble = {0};
 
@@ -214,10 +202,14 @@ static void estc_advertising_init()
     memset(&init, 0, sizeof(init));
 
     init.advdata.name_type               = BLE_ADVDATA_FULL_NAME;
+    init.advdata.include_appearance      = true;
     init.advdata.flags                   = BLE_GAP_ADV_FLAGS_LE_ONLY_GENERAL_DISC_MODE;
 
-    init.advdata.uuids_complete.uuid_cnt = m_estc_ble.services_count + 1;
+    init.advdata.uuids_complete.uuid_cnt = 1;
     init.advdata.uuids_complete.p_uuids  = m_estc_ble.advert_uuids;
+
+    init.srdata.uuids_complete.uuid_cnt = m_estc_ble.services_count;
+    init.srdata.uuids_complete.p_uuids  = &m_estc_ble.advert_uuids[1];
 
     init.config.ble_adv_fast_enabled  = true;
     init.config.ble_adv_fast_interval = ESTC_BLE_APP_ADV_INTERVAL;
@@ -275,7 +267,6 @@ estc_ble_t * estc_ble_init(const char * deviceName, const char * manufacturer)
     estc_softdevice_init();
     estc_gap_params_init(deviceName);
     estc_gatt_init();
-    estc_advertising_init();
     estc_conn_params_init();
     return &m_estc_ble;
 }
@@ -283,6 +274,7 @@ estc_ble_t * estc_ble_init(const char * deviceName, const char * manufacturer)
 void estc_ble_start(estc_ble_t * estc_ble)
 {
     UNUSED_PARAMETER(estc_ble);
+    estc_advertising_init();
     ret_code_t err_code = ble_advertising_start(&m_advertising, BLE_ADV_MODE_FAST);
     APP_ERROR_CHECK(err_code);
 

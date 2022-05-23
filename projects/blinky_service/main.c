@@ -618,6 +618,9 @@ int main(void)
    power_management_init();
    estc_ble_t * estc_ble = estc_ble_init(DEVICE_NAME, MANUFACTURER_NAME);
    
+   ble_uuid128_t  base_uuid128 = {ESTC_BASE_UUID};
+   ret_code_t err_code = estc_ble_service_add(&m_estc_service, estc_ble, &base_uuid128, ESTC_SERVICE_UUID );
+   APP_ERROR_CHECK(err_code);
 
    // Start execution.
    NRF_LOG_INFO("ESTC GATT service example started");

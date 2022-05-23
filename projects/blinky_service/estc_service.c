@@ -29,6 +29,7 @@
 */
 
 #include "estc_service.h"
+#include "estc_ble_private.h"
 
 #include "app_error.h"
 #include "nrf_log.h"
@@ -51,8 +52,29 @@ ret_code_t estc_ble_service_init(estc_ble_service_t *service, ble_uuid128_t * ba
     error_code = sd_ble_gatts_service_add(BLE_GATTS_SRVC_TYPE_PRIMARY, &service->service_uuid, &service->service_handle);
     APP_ERROR_CHECK(error_code);
 
-    // TODO: 3. Add service UUIDs to the BLE stack table using `sd_ble_uuid_vs_add`
-    // TODO: 4. Add service to the BLE stack using `sd_ble_gatts_service_add`
+    
+    NRF_LOG_DEBUG("%s:%d | Service UUID: 0x%04x", __FUNCTION__, __LINE__, service->service_uuid.uuid);
+    NRF_LOG_DEBUG("%s:%d | Service UUID type: 0x%02x", __FUNCTION__, __LINE__, service->service_uuid.type);
+    NRF_LOG_DEBUG("%s:%d | Service handle: 0x%04x", __FUNCTION__, __LINE__, service->service_handle);
+
+    return NRF_SUCCESS;
+}
+
+ret_code_t estc_ble_service_add(estc_ble_service_t *service, estc_ble_t * estc_ble, ble_uuid128_t * base_uuid128, uint16_t service_uuid )
+{
+    ret_code_t error_code = NRF_SUCCESS;
+    memset(service, 0, sizeof(estc_ble_service_t));
+
+    service->service_uuid.uuid = service_uuid ;
+    error_code = sd_ble_uuid_vs_add(base_uuid128, &service->service_uuid.type);
+    APP_ERROR_CHECK(error_code);
+
+    error_code = sd_ble_gatts_service_add(BLE_GATTS_SRVC_TYPE_PRIMARY, &service->service_uuid, &service->service_handle);
+    APP_ERROR_CHECK(error_code);
+
+    estc_ble->services_count++;
+    ble_uuid_t serviceUUID = {service_uuid, BLE_UUID_TYPE_VENDOR_BEGIN };
+    estc_ble->advert_uuids[estc_ble->services_count] = serviceUUID;
 
     NRF_LOG_DEBUG("%s:%d | Service UUID: 0x%04x", __FUNCTION__, __LINE__, service->service_uuid.uuid);
     NRF_LOG_DEBUG("%s:%d | Service UUID type: 0x%02x", __FUNCTION__, __LINE__, service->service_uuid.type);
@@ -60,6 +82,7 @@ ret_code_t estc_ble_service_init(estc_ble_service_t *service, ble_uuid128_t * ba
 
     return NRF_SUCCESS;
 }
+
 
 /**
  *  Adds characteristic
@@ -163,3 +186,5 @@ ble_gatts_hvx_params_t hvx_params = {0};
     return NRF_SUCCESS;    
 
 }                        
+
+

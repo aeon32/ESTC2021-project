@@ -31,11 +31,12 @@
 #ifndef ESTC_SERVICE_H__
 #define ESTC_SERVICE_H__
 
+#include "estc_ble.h"
+#include "sdk_errors.h"
+
 #include <stdint.h>
 #include <stdbool.h>
-
-#include "ble.h"
-#include "sdk_errors.h"
+#include <ble.h>
 
 
 #define ESTC_GATT_BLINKY_HSV_CHAR 0x1205
@@ -72,6 +73,12 @@ typedef struct
  *  Adds service to ble stack
 **/
 ret_code_t estc_ble_service_init(estc_ble_service_t *service, ble_uuid128_t * base_uuid128, uint16_t service_uuid );
+
+/**
+ * @brief add service to ble stack
+ * 
+**/
+ret_code_t estc_ble_service_add(estc_ble_service_t *service, estc_ble_t * estc_ble, ble_uuid128_t * base_uuid128, uint16_t service_uuid );
 
 /**
  * ESTC service characteristics traits
