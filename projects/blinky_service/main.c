@@ -616,11 +616,14 @@ int main(void)
    timers_init();
    buttons_leds_init();
    power_management_init();
-   estc_ble_init(DEVICE_NAME, MANUFACTURER_NAME);
+   estc_ble_t * estc_ble = estc_ble_init(DEVICE_NAME, MANUFACTURER_NAME);
    
 
    // Start execution.
    NRF_LOG_INFO("ESTC GATT service example started");
+   estc_ble_start(estc_ble);
+
+
 
     // Enter main loop.
     for (;;)
