@@ -29,6 +29,8 @@ typedef struct _Application
     nrf_pwm_values_individual_t duty_cycle_values;
     //structure for defining a sequence of PWM duty cycles
     nrf_pwm_sequence_t sequence;
+    //current color
+    HSVColor color;
 
 } Application;
 
@@ -50,6 +52,7 @@ void application_next_tick(Application* app);
 **/
 void application_process_press(Application* app);
 void application_process_release(Application* app);
+
 
 
 #endif

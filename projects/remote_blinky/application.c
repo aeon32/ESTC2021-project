@@ -66,7 +66,7 @@ static bool application_load_hsv_from_flash(Application * app, HSVColor * out_co
     return res;
 }
 
-static bool applicationt_save_hsv_to_flash(Application * app, HSVColor * color)
+static bool application_save_hsv_to_flash(Application * app, HSVColor * color)
 {
     bool res = false;
     return res;
@@ -78,10 +78,10 @@ static void hsv_machine_toggle_mode_handler(ESTCHSVMachineMode new_mode, void * 
         return;
     
     Application * app = (Application *) user_data;
-    HSVColor led_color = estc_hsv_machine_get_components(&app->hsv_machine);
+    app->color = estc_hsv_machine_get_components(&app->hsv_machine);
 
-    applicationt_save_hsv_to_flash(app, &led_color);
-    application_load_hsv_from_flash(app, &led_color);
+    application_save_hsv_to_flash(app, &app->color);
+    application_load_hsv_from_flash(app, &app->color);
 }
 
 #if defined(CLI_SUPPORT) && CLI_SUPPORT
@@ -133,8 +133,8 @@ static bool terminal_command_handle_rgb(char ** strtok_context, Application * ap
     if (command_ok)
     {
         estc_hsv_machine_set_components_rgb(&app->hsv_machine, &led_color);
-        HSVColor led_color = estc_hsv_machine_get_components(&app->hsv_machine);
-        applicationt_save_hsv_to_flash(app, &led_color);
+        app->color = estc_hsv_machine_get_components(&app->hsv_machine);
+        application_save_hsv_to_flash(app, &app->color);
         const char * save_ok_string = "Successful.\r\n";
         application_cli_write(app, save_ok_string, strlen( save_ok_string));
     }
@@ -185,7 +185,8 @@ static bool terminal_command_handle_hsv(char ** strtok_context, Application * ap
     if (command_ok)
     {
         estc_hsv_machine_set_components(&app->hsv_machine, &led_color);
-        applicationt_save_hsv_to_flash(app, &led_color);
+        app->color = led_color;
+        application_save_hsv_to_flash(app, &led_color);
         const char * save_ok_string = "Successful.\r\n";
         application_cli_write(app, save_ok_string, strlen( save_ok_string));
         UNUSED_VARIABLE(led_color);
@@ -229,11 +230,12 @@ void application_init(Application* app)
 {
     memset(app, 0, sizeof(Application));
     HSVColor led_color = {.hsv_components = {0, 255, 255}};
+    app->color = led_color;
 
-    application_load_hsv_from_flash(app, &led_color);
+    application_load_hsv_from_flash(app, &app->color);
     
     estc_button_init(&app->button, button_on_doubleclick_handler, button_on_longpress_handler, app);
-    estc_hsv_machine_init(&app->hsv_machine, &led_color, PWM_VALUE_MAX, 
+    estc_hsv_machine_init(&app->hsv_machine, &app->color, PWM_VALUE_MAX, 
         hsv_machine_toggle_mode_handler, app );
 
 #if defined(CLI_SUPPORT) && CLI_SUPPORT

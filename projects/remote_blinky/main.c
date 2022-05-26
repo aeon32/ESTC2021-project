@@ -37,12 +37,12 @@ static const int RTC_FREQUENCY_DIVIDER = RTC_PERIOD * APP_TIMER_CLOCK_FREQ / 100
 
 #define ESTC_BASE_UUID {0x57,0xB7, 0xA8, 0xBF, 0xB0, 0x78, 0x21, 0x43, 0xA6, 0x71, 0x16, 0x88, 0x12, 0x04, 0xA4, 0x64}
 #define ESTC_SERVICE_UUID  0x1204 
+#define ESTC_SERVICE_HSV_CHAR_UUID 0x1205
 
 typedef struct 
 {
     estc_ble_service_t base; 
-    
-
+    ble_gatts_char_handles_t color_char_handle;
 } blinky_service_t;
 
 blinky_service_t m_blinky_service;
@@ -135,7 +135,7 @@ static void power_management_init(void)
 }
 
 
-static void blinky_service_init(estc_ble_t * estc_ble)
+static void blinky_service_init(estc_ble_t * estc_ble, Application * app)
 {
    memset(&m_blinky_service, 0, sizeof(blinky_service_t));
    ble_uuid128_t  base_uuid128 = {ESTC_BASE_UUID};
@@ -143,7 +143,11 @@ static void blinky_service_init(estc_ble_t * estc_ble)
    ret_code_t err_code = estc_ble_service_init(&m_blinky_service.base, estc_ble, &base_uuid128, ESTC_SERVICE_UUID );
    APP_ERROR_CHECK(err_code);
 
-   //blinky_service_add_chars(blinky_service);
+   
+   err_code = estc_ble_add_characteristic(&m_blinky_service.base, ESTC_SERVICE_HSV_CHAR_UUID, 
+                                           "HSVColor ", (uint8_t *) &app->color,
+                                           sizeof(&app->color), ESTC_CHAR_READ | ESTC_CHAR_NOTIFY, &m_blinky_service.color_char_handle);
+   APP_ERROR_CHECK(err_code);
    //NRF_SDH_BLE_OBSERVER(m_connection_observer_observer, ESTC_BLE_OBSERVER_PRIO, connection_handler, &m_blinky_service);    
 }
 
@@ -159,7 +163,7 @@ int main(void)
     power_management_init();
     
     estc_ble_t * estc_ble = estc_ble_init(DEVICE_NAME, MANUFACTURER_NAME);  
-    blinky_service_init(estc_ble);
+    blinky_service_init(estc_ble, &app);
 
     NRF_LOG_INFO("Entering main loop");
     estc_ble_start(estc_ble);
