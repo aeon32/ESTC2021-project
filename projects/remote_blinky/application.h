@@ -11,7 +11,6 @@
 #include "estc_hsv_machine.h"
 #include "estc_button.h"
 #include "estc_monotonic_time.h"
-#include "estc_storage.h"
 #include "estc_uart_term.h"
 
 //total leds number
@@ -26,7 +25,6 @@ typedef struct _Application
 {
     ESTCButton button;
     ESTCHSVMachine hsv_machine;
-    ESTCStorage storage;
     //Duty cycle values for a sequence loaded in NRF_PWM_LOAD_INDIVIDUAL
     nrf_pwm_values_individual_t duty_cycle_values;
     //structure for defining a sequence of PWM duty cycles
@@ -53,10 +51,5 @@ void application_next_tick(Application* app);
 void application_process_press(Application* app);
 void application_process_release(Application* app);
 
-/**
- *  Critical section for Application instance
-**/
-void application_lock(Application* app);
-void application_unlock(Application* app);
 
 #endif

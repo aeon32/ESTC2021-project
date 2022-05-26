@@ -62,7 +62,8 @@ void led_toggle(int led_number)
 
 void button_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
 {
-    application_lock(&app);
+    NRFX_CRITICAL_SECTION_ENTER();
+   
     if (button_is_pressed())
     {
         application_process_press(&app);
@@ -71,7 +72,7 @@ void button_handler(nrfx_gpiote_pin_t pin, nrf_gpiote_polarity_t action)
     {
         application_process_release(&app);
     }
-    application_unlock(&app);
+    NRFX_CRITICAL_SECTION_EXIT();
 }
 
 void gpiote_init()
@@ -117,9 +118,9 @@ int main(void)
     NRF_LOG_INFO("Entering main loop");
     while (true)
     {
-        application_lock(&app);
+        NRFX_CRITICAL_SECTION_ENTER();
         application_next_tick(&app);
-        application_unlock(&app);        
+        NRFX_CRITICAL_SECTION_EXIT();   
         LOG_BACKEND_USB_PROCESS();
         NRF_LOG_PROCESS();
     }
