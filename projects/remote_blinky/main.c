@@ -11,6 +11,7 @@
 #include <app_usbd.h>
 #include <app_timer.h>
 #include <sdk_errors.h>
+#include <nrf_pwr_mgmt.h>
 
 #include <boards.h>
 
@@ -18,6 +19,8 @@
 #include "estc_blinky_machine.h"
 #include "estc_button.h"
 #include "estc_monotonic_time.h"
+#include "estc_ble.h"
+#include "estc_service.h"
 
 #include "application.h"
 
@@ -27,6 +30,25 @@ static const int RTC_PERIOD = 5188;
 
 //clock divider == ESTC_TIMER_CLOCK_FREQ / ( 1000000 usec / RTC_PERIOD usec);
 static const int RTC_FREQUENCY_DIVIDER = RTC_PERIOD * APP_TIMER_CLOCK_FREQ / 1000000;
+
+//BLE params
+#define DEVICE_NAME                     "ESTColour"                             /**< Name of device. Will be included in the advertising data. */
+#define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
+
+#define ESTC_BASE_UUID {0x57,0xB7, 0xA8, 0xBF, 0xB0, 0x78, 0x21, 0x43, 0xA6, 0x71, 0x16, 0x88, 0x12, 0x04, 0xA4, 0x64}
+#define ESTC_SERVICE_UUID  0x1204 
+
+typedef struct 
+{
+    estc_ble_service_t base; 
+    
+
+} blinky_service_t;
+
+blinky_service_t m_blinky_service;
+
+
+
 
 void configure_gpio()
 {
@@ -105,6 +127,26 @@ void rtc_init()
     err = app_timer_start(default_timer_id, RTC_FREQUENCY_DIVIDER, NULL);
 }
 
+static void power_management_init(void)
+{
+    ret_code_t err_code;
+    err_code = nrf_pwr_mgmt_init();
+    APP_ERROR_CHECK(err_code);
+}
+
+
+static void blinky_service_init(estc_ble_t * estc_ble)
+{
+   memset(&m_blinky_service, 0, sizeof(blinky_service_t));
+   ble_uuid128_t  base_uuid128 = {ESTC_BASE_UUID};
+
+   ret_code_t err_code = estc_ble_service_init(&m_blinky_service.base, estc_ble, &base_uuid128, ESTC_SERVICE_UUID );
+   APP_ERROR_CHECK(err_code);
+
+   //blinky_service_add_chars(blinky_service);
+   //NRF_SDH_BLE_OBSERVER(m_connection_observer_observer, ESTC_BLE_OBSERVER_PRIO, connection_handler, &m_blinky_service);    
+}
+
 int main(void)
 {
     /* Configure board. */
@@ -114,14 +156,22 @@ int main(void)
     configure_gpio();
     rtc_init();
     gpiote_init();
+    power_management_init();
+    
+    estc_ble_t * estc_ble = estc_ble_init(DEVICE_NAME, MANUFACTURER_NAME);  
+    blinky_service_init(estc_ble);
 
     NRF_LOG_INFO("Entering main loop");
+    estc_ble_start(estc_ble);
     while (true)
     {
         NRFX_CRITICAL_SECTION_ENTER();
         application_next_tick(&app);
         NRFX_CRITICAL_SECTION_EXIT();   
         LOG_BACKEND_USB_PROCESS();
-        NRF_LOG_PROCESS();
+        if (NRF_LOG_PROCESS() == false)
+        {
+            nrf_pwr_mgmt_run();
+        }
     }
 }
