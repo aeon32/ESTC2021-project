@@ -47,9 +47,6 @@ typedef struct
 
 blinky_service_t m_blinky_service;
 
-
-
-
 void configure_gpio()
 {
     for (int i = 0; i < ESTC_LEDS_NUMBER; i++)
@@ -143,10 +140,13 @@ static void blinky_service_init(estc_ble_t * estc_ble, Application * app)
    ret_code_t err_code = estc_ble_service_init(&m_blinky_service.base, estc_ble, &base_uuid128, ESTC_SERVICE_UUID );
    APP_ERROR_CHECK(err_code);
 
-   
+   char color_value[ESTC_HSV_COLOR_BUFFER_MAX_LEN];
+   size_t outlen;
+   application_get_color_as_text(app, color_value, &outlen );
+
    err_code = estc_ble_add_characteristic(&m_blinky_service.base, ESTC_SERVICE_HSV_CHAR_UUID, 
-                                           "HSVColor ", (uint8_t *) &app->color,
-                                           sizeof(&app->color), ESTC_CHAR_READ | ESTC_CHAR_NOTIFY, &m_blinky_service.color_char_handle);
+                                           "HSVColor ", (uint8_t *) color_value,
+                                           outlen, ESTC_CHAR_READ | ESTC_CHAR_NOTIFY | ESTC_CHAR_TEXT_FORMAT, &m_blinky_service.color_char_handle);
    APP_ERROR_CHECK(err_code);
    //NRF_SDH_BLE_OBSERVER(m_connection_observer_observer, ESTC_BLE_OBSERVER_PRIO, connection_handler, &m_blinky_service);    
 }

@@ -285,4 +285,14 @@ void application_process_release(Application* app)
     estc_button_process_release(&app->button);
 }
 
+void application_get_color_as_text(Application * app, char * out_buffer, size_t * out_len)
+{
+   long int norm_h = app->color.hsv.h*360/255;
+   long int norm_s = app->color.hsv.s*100/255;
+   long int norm_v = app->color.hsv.v*100/255;
+  *out_len = sprintf(out_buffer, "HSV %ld %ld %ld", 
+            norm_h, norm_s, norm_v );
+  
+}
+
 Application app;

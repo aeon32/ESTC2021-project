@@ -16,6 +16,9 @@
 //total leds number
 #define ESTC_LEDS_NUMBER 4
 
+//buffsize, enough to store text representation of HSV string
+#define ESTC_HSV_COLOR_BUFFER_MAX_LEN 32
+
 //consts, defined in application.c
 extern const uint8_t ESTC_LEDS_PINS[ESTC_LEDS_NUMBER];
 
@@ -53,6 +56,10 @@ void application_next_tick(Application* app);
 void application_process_press(Application* app);
 void application_process_release(Application* app);
 
-
+/**
+ * @brief Returns current color as text
+ * @param out_buffer should have size at least ESTC_HSV_COLOR_BUFFER_MAX_LEN
+**/
+void application_get_color_as_text(Application * app, char * out_buffer, size_t * out_len);
 
 #endif
