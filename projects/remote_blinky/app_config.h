@@ -31,8 +31,8 @@
 #define APP_CONFIG_H
 
 
-#ifndef CLI_SUPPORT
-#define CLI_SUPPORT 1
+#ifndef UART_CLI_SUPPORT
+#define UART_CLI_SUPPORT 1
 #endif
 
 // <e> NRF_LOG_BACKEND_UART_ENABLED - nrf_log_backend_uart - Log UART backend

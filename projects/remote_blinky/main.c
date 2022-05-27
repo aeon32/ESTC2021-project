@@ -12,6 +12,7 @@
 #include <app_timer.h>
 #include <sdk_errors.h>
 #include <nrf_pwr_mgmt.h>
+#include <nrf_sdh_ble.h>
 
 #include <boards.h>
 
@@ -35,14 +36,20 @@ static const int RTC_FREQUENCY_DIVIDER = RTC_PERIOD * APP_TIMER_CLOCK_FREQ / 100
 #define DEVICE_NAME                     "ESTColour"                             /**< Name of device. Will be included in the advertising data. */
 #define MANUFACTURER_NAME               "NordicSemiconductor"                   /**< Manufacturer. Will be passed to Device Information Service. */
 
+#define COLOR_READ_CHAR_NAME            "HSVColor"                              /**< Name of characteristic for color reading and notification. */  
+#define COMMAND_CHAR_NAME               "Command"                               /**< Characteristic for command processing. */  
+
 #define ESTC_BASE_UUID {0x57,0xB7, 0xA8, 0xBF, 0xB0, 0x78, 0x21, 0x43, 0xA6, 0x71, 0x16, 0x88, 0x12, 0x04, 0xA4, 0x64}
 #define ESTC_SERVICE_UUID  0x1204 
-#define ESTC_SERVICE_HSV_CHAR_UUID 0x1205
+#define ESTC_SERVICE_HSV_COLOR_READ_CHAR_UUID 0x1205
+#define ESTC_SERVICE_COMMAND_CHAR_UUID 0x1206
 
 typedef struct 
 {
     estc_ble_service_t base; 
     ble_gatts_char_handles_t color_char_handle;
+    ble_gatts_char_handles_t command_char_handle;
+    Application * app;
 } blinky_service_t;
 
 blinky_service_t m_blinky_service;
@@ -131,10 +138,33 @@ static void power_management_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
+static void ble_write_handler(ble_evt_t const * p_ble_evt, void * p_context)
+{
+    //ret_code_t err_code = NRF_SUCCESS;
+    //Application * app = (Application *) p_context;
+    blinky_service_t * service = (blinky_service_t *) p_context;
+
+    switch (p_ble_evt->header.evt_id)
+    {
+         case BLE_GATTS_EVT_WRITE:
+         {
+            const ble_gatts_evt_write_t *  p_evt_write = &p_ble_evt->evt.gatts_evt.params.write;
+            if (p_evt_write->handle == service->command_char_handle.value_handle)
+            {
+                NRF_LOG_INFO("write");
+
+            }
+            break;
+         }
+    }
+}
+
+
 
 static void blinky_service_init(estc_ble_t * estc_ble, Application * app)
 {
    memset(&m_blinky_service, 0, sizeof(blinky_service_t));
+   m_blinky_service.app = app;
    ble_uuid128_t  base_uuid128 = {ESTC_BASE_UUID};
 
    ret_code_t err_code = estc_ble_service_init(&m_blinky_service.base, estc_ble, &base_uuid128, ESTC_SERVICE_UUID );
@@ -145,19 +175,23 @@ static void blinky_service_init(estc_ble_t * estc_ble, Application * app)
    size_t outlen;
    application_get_color_as_text(app, color_value, &outlen );
 
-   err_code = estc_ble_add_characteristic(&m_blinky_service.base, ESTC_SERVICE_HSV_CHAR_UUID, 
-                                           "HSVColor ", (uint8_t *) color_value,
+   err_code = estc_ble_add_characteristic(&m_blinky_service.base, ESTC_SERVICE_HSV_COLOR_READ_CHAR_UUID, 
+                                           COLOR_READ_CHAR_NAME, (uint8_t *) color_value,
                                            ESTC_HSV_COLOR_BUFFER_MAX_LEN -1, ESTC_HSV_COLOR_BUFFER_MAX_LEN -1,
                                            ESTC_CHAR_READ | ESTC_CHAR_NOTIFY | ESTC_CHAR_TEXT_FORMAT, &m_blinky_service.color_char_handle);
    APP_ERROR_CHECK(err_code);
-   //NRF_SDH_BLE_OBSERVER(m_connection_observer_observer, ESTC_BLE_OBSERVER_PRIO, connection_handler, &m_blinky_service);    
+
+   err_code = estc_ble_add_characteristic(&m_blinky_service.base, ESTC_SERVICE_COMMAND_CHAR_UUID, 
+                                           COMMAND_CHAR_NAME, NULL,
+                                           0, ESTC_HSV_COLOR_BUFFER_MAX_LEN -1,
+                                           ESTC_CHAR_WRITE | ESTC_CHAR_TEXT_FORMAT, &m_blinky_service.command_char_handle);   
+   NRF_SDH_BLE_OBSERVER(m_write_observer, ESTC_BLE_OBSERVER_PRIO, ble_write_handler, &m_blinky_service);    
 }
 
 static void color_change_handler(Application * app, void * user_data)
 {
     blinky_service_t * blinky_service = (blinky_service_t *) user_data;
     uint16_t connection_handle = estc_ble_connection_handle(blinky_service->base.estc_ble);
-    NRF_LOG_INFO("color handler");
 
     if (connection_handle != BLE_CONN_HANDLE_INVALID)
     {
@@ -165,13 +199,14 @@ static void color_change_handler(Application * app, void * user_data)
         memset(color_value, ' ', sizeof(color_value));   //padding for better displaying in mobile app
         size_t outlen;
         application_get_color_as_text(app, color_value, &outlen );
-        NRF_LOG_INFO("notify %s", color_value);
         estc_char_notify(connection_handle, &blinky_service->color_char_handle,
                             (uint8_t * ) color_value, ESTC_HSV_COLOR_BUFFER_MAX_LEN -1 ); 
 
     }
     
 }
+
+
 
 int main(void)
 {

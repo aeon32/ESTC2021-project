@@ -103,12 +103,14 @@ static void hsv_machine_toggle_mode_handler(ESTCHSVMachineMode new_mode, void * 
     application_update_color((Application *) user_data);
 }
 
-#if defined(CLI_SUPPORT) && CLI_SUPPORT
+
 static const char * TERMINAL_COMMAND_DELIMITER = " \t";
 
 static void application_cli_write(Application * app, const char * data, size_t data_size)
 {
+#if defined(UART_CLI_SUPPORT) && UART_CLI_SUPPORT
     estc_uart_write(data, data_size);
+#endif
 }
 
 static bool terminal_command_handle_rgb(char ** strtok_context, Application * app)
@@ -253,7 +255,7 @@ static void terminal_command_handler(char * command, void * user_data)
         application_cli_write(app, help_string, strlen(help_string));
     }
 }
-#endif //CLI_SUPPORT
+
 
 void application_init(Application* app)
 {
@@ -267,7 +269,7 @@ void application_init(Application* app)
     estc_hsv_machine_init(&app->hsv_machine, &app->color, PWM_VALUE_MAX, 
         hsv_machine_toggle_mode_handler, app );
 
-#if defined(CLI_SUPPORT) && CLI_SUPPORT
+#if defined(UART_CLI_SUPPORT) && UART_CLI_SUPPORT
     estc_uart_term_init(terminal_command_handler, app);
 #endif        
     
@@ -299,7 +301,7 @@ void application_next_tick(Application* app)
 {
     estc_button_process_update(&app->button);
     estc_hsv_machine_next_state(&app->hsv_machine);
-#ifdef CLI_SUPPORT
+#if defined(UART_CLI_SUPPORT) && UART_CLI_SUPPORT
     estc_uart_term_process_events();
 #endif    
 }
@@ -328,5 +330,19 @@ void application_get_color_as_text(Application * app, char * out_buffer, size_t 
      app->color_handler = handler;
      app->color_change_handler_user_data = color_change_handler_user_data;
  }
+
+
+void application_handle_cli_command(Application * app, const char * command, size_t command_len)
+{
+    if (command_len >= ESTC_HSV_COLOR_BUFFER_MAX_LEN)
+    {
+        //it is not well-formed command
+        return;
+    }
+    
+    char auxbuffer[ESTC_HSV_COLOR_BUFFER_MAX_LEN];
+    
+
+}
 
 Application app;

@@ -68,6 +68,16 @@ void application_process_release(Application* app);
 **/
 void application_get_color_as_text(Application * app, char * out_buffer, size_t * out_len);
 
+/**
+ * @brief Set handler on color change event
+ * 
+**/
 void application_set_color_change_handler(Application * app, ColorChangeHandler handler, void * color_change_handler_user_data);
+
+/**
+ * @brief 
+ * 
+ */
+void application_handle_command();
 
 #endif
