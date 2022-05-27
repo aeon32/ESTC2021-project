@@ -33,6 +33,34 @@ static const int PWM_VALUE_MAX = 50;
 
 static nrfx_pwm_t PWM_INSTANCE = NRFX_PWM_INSTANCE(0);
 
+
+static bool application_load_hsv_from_flash(Application * app, HSVColor * out_color)
+{
+    bool res = false;
+
+    return res;
+}
+
+static bool application_save_hsv_to_flash(Application * app, HSVColor * color)
+{
+    bool res = false;
+    return res;
+}
+
+static void application_update_color(Application * app)
+{
+    app->color = estc_hsv_machine_get_components(&app->hsv_machine);
+
+    if (app->color_handler)
+    {
+        app->color_handler(app, app->color_change_handler_user_data);
+    }
+
+    application_save_hsv_to_flash(app, &app->color);
+    application_load_hsv_from_flash(app, &app->color);
+    
+}
+
 static void button_on_doubleclick_handler(void* user_data)
 {
     //C-style leg shooting )
@@ -44,6 +72,12 @@ static void button_on_longpress_handler(void* user_data)
 {
     Application* app = (Application*)user_data;
     estc_hsv_machine_increase_component(&app->hsv_machine);
+}
+
+static void button_on_release_after_longpress_handler(void * user_data)
+{
+    application_update_color((Application *) user_data);
+
 }
 
 static void pwm_handler(nrfx_pwm_evt_type_t event_type)
@@ -59,29 +93,14 @@ static void pwm_handler(nrfx_pwm_evt_type_t event_type)
     NRFX_CRITICAL_SECTION_EXIT();
 }
 
-static bool application_load_hsv_from_flash(Application * app, HSVColor * out_color)
-{
-    bool res = false;
 
-    return res;
-}
-
-static bool application_save_hsv_to_flash(Application * app, HSVColor * color)
-{
-    bool res = false;
-    return res;
-}
 
 static void hsv_machine_toggle_mode_handler(ESTCHSVMachineMode new_mode, void * user_data)
 {
-    if (new_mode != ESTCHSV_NO_INPUT)
-        return;
+    //if (new_mode != ESTCHSV_NO_INPUT)
+    //    return;
     
-    Application * app = (Application *) user_data;
-    app->color = estc_hsv_machine_get_components(&app->hsv_machine);
-
-    application_save_hsv_to_flash(app, &app->color);
-    application_load_hsv_from_flash(app, &app->color);
+    application_update_color((Application *) user_data);
 }
 
 #if defined(CLI_SUPPORT) && CLI_SUPPORT
@@ -134,6 +153,11 @@ static bool terminal_command_handle_rgb(char ** strtok_context, Application * ap
     {
         estc_hsv_machine_set_components_rgb(&app->hsv_machine, &led_color);
         app->color = estc_hsv_machine_get_components(&app->hsv_machine);
+        if (app->color_handler)
+        {
+            app->color_handler(app, app->color_change_handler_user_data);
+        }
+        
         application_save_hsv_to_flash(app, &app->color);
         const char * save_ok_string = "Successful.\r\n";
         application_cli_write(app, save_ok_string, strlen( save_ok_string));
@@ -186,6 +210,11 @@ static bool terminal_command_handle_hsv(char ** strtok_context, Application * ap
     {
         estc_hsv_machine_set_components(&app->hsv_machine, &led_color);
         app->color = led_color;
+        if (app->color_handler)
+        {
+            app->color_handler(app, app->color_change_handler_user_data);
+        }
+
         application_save_hsv_to_flash(app, &led_color);
         const char * save_ok_string = "Successful.\r\n";
         application_cli_write(app, save_ok_string, strlen( save_ok_string));
@@ -234,7 +263,7 @@ void application_init(Application* app)
 
     application_load_hsv_from_flash(app, &app->color);
     
-    estc_button_init(&app->button, button_on_doubleclick_handler, button_on_longpress_handler, app);
+    estc_button_init(&app->button, button_on_doubleclick_handler, button_on_longpress_handler, button_on_release_after_longpress_handler, app);
     estc_hsv_machine_init(&app->hsv_machine, &app->color, PWM_VALUE_MAX, 
         hsv_machine_toggle_mode_handler, app );
 
@@ -290,9 +319,14 @@ void application_get_color_as_text(Application * app, char * out_buffer, size_t 
    long int norm_h = app->color.hsv.h*360/255;
    long int norm_s = app->color.hsv.s*100/255;
    long int norm_v = app->color.hsv.v*100/255;
-  *out_len = sprintf(out_buffer, "HSV %ld %ld %ld", 
+   *out_len = sprintf(out_buffer, "HSV %ld %ld %ld", 
             norm_h, norm_s, norm_v );
-  
 }
+
+ void application_set_color_change_handler(Application * app, ColorChangeHandler handler, void * color_change_handler_user_data)
+ {
+     app->color_handler = handler;
+     app->color_change_handler_user_data = color_change_handler_user_data;
+ }
 
 Application app;

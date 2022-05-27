@@ -141,14 +141,36 @@ static void blinky_service_init(estc_ble_t * estc_ble, Application * app)
    APP_ERROR_CHECK(err_code);
 
    char color_value[ESTC_HSV_COLOR_BUFFER_MAX_LEN];
+   memset(color_value, ' ', sizeof(color_value));   //padding for better displaying in mobile app
    size_t outlen;
    application_get_color_as_text(app, color_value, &outlen );
 
    err_code = estc_ble_add_characteristic(&m_blinky_service.base, ESTC_SERVICE_HSV_CHAR_UUID, 
                                            "HSVColor ", (uint8_t *) color_value,
-                                           outlen, ESTC_CHAR_READ | ESTC_CHAR_NOTIFY | ESTC_CHAR_TEXT_FORMAT, &m_blinky_service.color_char_handle);
+                                           ESTC_HSV_COLOR_BUFFER_MAX_LEN -1, ESTC_HSV_COLOR_BUFFER_MAX_LEN -1,
+                                           ESTC_CHAR_READ | ESTC_CHAR_NOTIFY | ESTC_CHAR_TEXT_FORMAT, &m_blinky_service.color_char_handle);
    APP_ERROR_CHECK(err_code);
    //NRF_SDH_BLE_OBSERVER(m_connection_observer_observer, ESTC_BLE_OBSERVER_PRIO, connection_handler, &m_blinky_service);    
+}
+
+static void color_change_handler(Application * app, void * user_data)
+{
+    blinky_service_t * blinky_service = (blinky_service_t *) user_data;
+    uint16_t connection_handle = estc_ble_connection_handle(blinky_service->base.estc_ble);
+    NRF_LOG_INFO("color handler");
+
+    if (connection_handle != BLE_CONN_HANDLE_INVALID)
+    {
+        char color_value[ESTC_HSV_COLOR_BUFFER_MAX_LEN];
+        memset(color_value, ' ', sizeof(color_value));   //padding for better displaying in mobile app
+        size_t outlen;
+        application_get_color_as_text(app, color_value, &outlen );
+        NRF_LOG_INFO("notify %s", color_value);
+        estc_char_notify(connection_handle, &blinky_service->color_char_handle,
+                            (uint8_t * ) color_value, ESTC_HSV_COLOR_BUFFER_MAX_LEN -1 ); 
+
+    }
+    
 }
 
 int main(void)
@@ -164,6 +186,8 @@ int main(void)
     
     estc_ble_t * estc_ble = estc_ble_init(DEVICE_NAME, MANUFACTURER_NAME);  
     blinky_service_init(estc_ble, &app);
+
+    application_set_color_change_handler(&app, color_change_handler, &m_blinky_service);
 
     NRF_LOG_INFO("Entering main loop");
     estc_ble_start(estc_ble);

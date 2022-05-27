@@ -3,11 +3,12 @@
 #include <boards.h>
 
 void estc_button_init(ESTCButton* button, ESTCButtonEventHandler double_click_handler,
-        ESTCButtonEventHandler long_press_handler, void* user_data)
+        ESTCButtonEventHandler long_press_handler, ESTCButtonEventHandler release_after_long_press_handler, void* user_data)
 {
     button->double_click = ESTC_BUTTON_RELEASED_STATE;
     button->long_press_handler = long_press_handler;
     button->double_click_handler = double_click_handler;
+    button->release_after_long_press_handler = release_after_long_press_handler;
     button->user_data = user_data;
     button->filtered_pressed = false;
     button->pressed = false;
@@ -98,6 +99,10 @@ void estc_button_process_update(ESTCButton* button)
         else
         {
             button->double_click = ESTC_BUTTON_RELEASED_STATE;
+            if (button->release_after_long_press_handler)
+            {
+                button->release_after_long_press_handler(button->user_data);
+            }
         }
     }
     else if (button->double_click == ESTC_BUTTON_SECOND_CLICK)

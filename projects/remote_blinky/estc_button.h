@@ -28,6 +28,7 @@ typedef struct
 
     ESTCButtonEventHandler double_click_handler;
     ESTCButtonEventHandler long_press_handler;
+    ESTCButtonEventHandler release_after_long_press_handler;
     void* user_data;
 
 } ESTCButton;
@@ -44,7 +45,7 @@ typedef struct
  * 
 **/
 void estc_button_init(ESTCButton* button, ESTCButtonEventHandler double_click_handler,
-        ESTCButtonEventHandler long_press_handler, void* user_data);
+        ESTCButtonEventHandler long_press_handler, ESTCButtonEventHandler release_after_long_press_handler, void* user_data);
 
 /**
  * Process button press

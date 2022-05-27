@@ -71,7 +71,7 @@ enum ESTC_CHAR_FLAGS
 **/
 ret_code_t estc_ble_add_characteristic(estc_ble_service_t *service, uint16_t char_id,
                                        const char * description,
-                                       uint8_t * char_data, uint16_t char_data_size,
+                                       uint8_t * char_data, uint16_t char_data_size, uint16_t max_char_data_size,
                                        uint32_t flags, ble_gatts_char_handles_t * out_char_handle);
 
 /**
