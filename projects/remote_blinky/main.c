@@ -159,10 +159,7 @@ static void color_change_handler(Application * app, void * user_data)
 
 static void ble_write_handler(ble_evt_t const * p_ble_evt, void * p_context)
 {
-    //ret_code_t err_code = NRF_SUCCESS;
-    //Application * app = (Application *) p_context;
     blinky_service_t * service = (blinky_service_t *) p_context;
-
     switch (p_ble_evt->header.evt_id)
     {
          case BLE_GATTS_EVT_WRITE:
@@ -220,6 +217,67 @@ static void blinky_service_init(estc_ble_t * estc_ble, Application * app)
 }
 
 
+int main2() {
+    /* Configure board. */
+    nrfx_systick_init();
+    log_init();
+    configure_gpio();
+
+    nrf_gpio_cfg(ESTC_BUTTON_PIN, NRF_GPIO_PIN_DIR_INPUT, NRF_GPIO_PIN_INPUT_CONNECT,
+                 NRF_GPIO_PIN_PULLUP, NRF_GPIO_PIN_S0S1, NRF_GPIO_PIN_NOSENSE);   
+
+    rtc_init();
+    power_management_init();
+    
+    estc_ble_t * estc_ble = estc_ble_init(DEVICE_NAME, MANUFACTURER_NAME);  
+
+
+    NRF_LOG_INFO("Entering main loop");
+    estc_ble_start(estc_ble);
+    bool do_once = false;
+    ESTCTimeStamp time = estc_monotonic_time_get();
+    ESTCStorage storage;
+    uint32_t pause = 500000;
+    while (true)
+    {
+        if (button_is_pressed() && !do_once)
+        {
+            do_once = true;
+
+
+            estc_storage_init(&storage);
+      
+            const StorageRecordHDR * record = estc_storage_get_last_record(&storage);
+            if (!record)
+            {
+               NRF_LOG_INFO("Mazafaka");
+               HSVColor color = {.hsv_components = { 0, 10, 10}};
+               estc_storage_save_data(&storage, 1, &color, sizeof(HSVColor) );
+            } else 
+            {
+                pause = 125000;
+                NRF_LOG_INFO("Loaded %d bytes", record->data_size);
+            }
+      
+
+        }
+        if (estc_monotonic_time_elapsed_test(time, pause))
+        {
+            time = estc_monotonic_time_get();
+            led_toggle(0);
+        }
+ 
+
+        NRFX_CRITICAL_SECTION_ENTER();
+        NRFX_CRITICAL_SECTION_EXIT();   
+        LOG_BACKEND_USB_PROCESS();
+        if (NRF_LOG_PROCESS() == false)
+        {
+            nrf_pwr_mgmt_run();
+        }
+    }
+
+}
 
 int main(void)
 {

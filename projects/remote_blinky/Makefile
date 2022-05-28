@@ -35,6 +35,7 @@ C_SRCS := main.c \
   estc_strutils.c\
   estc_ble.c\
   estc_service.c\
+  estc_storage.c\
   application.c\
   $(SDK_ROOT)/components/ble/ble_advertising/ble_advertising.c \
   $(SDK_ROOT)/components/ble/common/ble_advdata.c \

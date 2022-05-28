@@ -1,6 +1,7 @@
 #include "application.h"
 #include "estc_strutils.h"
 
+
 #include <nrf_log.h>
 #include <string.h>
 #include <stdlib.h>
@@ -38,13 +39,26 @@ static bool application_load_hsv_from_flash(Application * app, HSVColor * out_co
 {
     bool res = false;
 
+    estc_storage_find_last_record(&app->storage);
+    const StorageRecordHDR * record = estc_storage_get_last_record(&app->storage);
+    if (record)
+    {
+        NRF_LOG_INFO("Last record at %x type %u data_size %u", (uint32_t) record , record->data_type, record->data_size);  
+        if (record->data_size == sizeof(HSVColor))
+        {
+            const void * data = estc_storage_record_data(record);
+            memcpy(out_color, data, record->data_size);
+            res = true;
+            NRF_LOG_INFO("Components loaded %d %d %d", out_color->hsv.h, out_color->hsv.s, out_color->hsv.v);
+        }
+    }
+
     return res;
 }
 
-static bool application_save_hsv_to_flash(Application * app, HSVColor * color)
+static void application_save_hsv_to_flash(Application * app, HSVColor * color)
 {
-    bool res = false;
-    return res;
+    estc_storage_save_data(&app->storage, STORAGE_HSV_VALUES, color, sizeof(HSVColor) );
 }
 
 static void application_update_color(Application * app)
@@ -57,7 +71,6 @@ static void application_update_color(Application * app)
     }
 
     application_save_hsv_to_flash(app, &app->color);
-    application_load_hsv_from_flash(app, &app->color);
     
 }
 
@@ -76,8 +89,9 @@ static void button_on_longpress_handler(void* user_data)
 
 static void button_on_release_after_longpress_handler(void * user_data)
 {
-    application_update_color((Application *) user_data);
-
+    Application* app = (Application*)user_data;
+    application_update_color(app);
+    
 }
 
 static void pwm_handler(nrfx_pwm_evt_type_t event_type)
@@ -99,8 +113,8 @@ static void hsv_machine_toggle_mode_handler(ESTCHSVMachineMode new_mode, void * 
 {
     //if (new_mode != ESTCHSV_NO_INPUT)
     //    return;
-    
-    application_update_color((Application *) user_data);
+    Application * app = (Application *) user_data;
+    application_update_color(app);
 }
 
 
@@ -279,7 +293,7 @@ void application_init(Application* app)
     memset(app, 0, sizeof(Application));
     HSVColor led_color = {.hsv_components = {0, 255, 255}};
     app->color = led_color;
-
+    estc_storage_init(&app->storage);
     application_load_hsv_from_flash(app, &app->color);
     
     estc_button_init(&app->button, button_on_doubleclick_handler, button_on_longpress_handler, button_on_release_after_longpress_handler, app);
