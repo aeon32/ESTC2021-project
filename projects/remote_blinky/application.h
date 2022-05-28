@@ -16,8 +16,8 @@
 //total leds number
 #define ESTC_LEDS_NUMBER 4
 
-//buffsize, enough to store text representation of HSV string (including trailing \0)
-#define ESTC_HSV_COLOR_BUFFER_MAX_LEN 16
+//buffsize, enough to store text representation of any cli command  (without trailing \0)
+#define ESTC_CLI_COMMAND_MAX_LEN 16
 
 //consts, defined in application.c
 extern const uint8_t ESTC_LEDS_PINS[ESTC_LEDS_NUMBER];
@@ -75,9 +75,9 @@ void application_get_color_as_text(Application * app, char * out_buffer, size_t 
 void application_set_color_change_handler(Application * app, ColorChangeHandler handler, void * color_change_handler_user_data);
 
 /**
- * @brief 
+ * @brief Handle cli command
  * 
  */
-void application_handle_command();
+void application_handle_cli_command(Application * app, char * command, bool silent);
 
 #endif

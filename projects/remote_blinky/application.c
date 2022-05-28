@@ -113,7 +113,7 @@ static void application_cli_write(Application * app, const char * data, size_t d
 #endif
 }
 
-static bool terminal_command_handle_rgb(char ** strtok_context, Application * app)
+static bool terminal_command_handle_rgb(char ** strtok_context, Application * app, bool write_output_cli)
 {
     NRF_LOG_INFO("RGB command handler");
     bool command_ok = true;
@@ -161,13 +161,16 @@ static bool terminal_command_handle_rgb(char ** strtok_context, Application * ap
         }
         
         application_save_hsv_to_flash(app, &app->color);
-        const char * save_ok_string = "Successful.\r\n";
-        application_cli_write(app, save_ok_string, strlen( save_ok_string));
+        if (write_output_cli)
+        {
+            const char * save_ok_string = "Successful.\r\n";
+            application_cli_write(app, save_ok_string, strlen( save_ok_string));
+        }
     }
     return command_ok;
 }
 
-static bool terminal_command_handle_hsv(char ** strtok_context, Application * app)
+static bool terminal_command_handle_hsv(char ** strtok_context, Application * app, bool write_output_cli)
 {
     NRF_LOG_INFO("HSV command handler");
     bool command_ok = true;
@@ -218,16 +221,18 @@ static bool terminal_command_handle_hsv(char ** strtok_context, Application * ap
         }
 
         application_save_hsv_to_flash(app, &led_color);
-        const char * save_ok_string = "Successful.\r\n";
-        application_cli_write(app, save_ok_string, strlen( save_ok_string));
-        UNUSED_VARIABLE(led_color);
+        if (write_output_cli)
+        {
+            const char * save_ok_string = "Successful.\r\n";
+            application_cli_write(app, save_ok_string, strlen( save_ok_string));
+        }
     }
     return command_ok;
 }
 
-static void terminal_command_handler(char * command, void * user_data)
+
+void application_handle_cli_command(Application * app, char * command, bool silent)
 {
-    Application * app = (Application *) user_data;
     char * context = NULL;
     char * token = estc_strtok_r(command, TERMINAL_COMMAND_DELIMITER, &context);
     NRF_LOG_INFO("Command %s", command);
@@ -235,13 +240,13 @@ static void terminal_command_handler(char * command, void * user_data)
     if (token)
     {
         NRF_LOG_INFO("Token %s", token);
-        if (strcmp(token,"RGB") == 0)
+        if (strcmp(token,"rgb") == 0)
         {
-            command_ok = terminal_command_handle_rgb(&context, app);
+            command_ok = terminal_command_handle_rgb(&context, app, !silent);
         } 
-        else if (strcmp(token, "HSV") == 0)
+        else if (strcmp(token, "hsv") == 0)
         {
-            command_ok = terminal_command_handle_hsv(&context, app);
+            command_ok = terminal_command_handle_hsv(&context, app, !silent);
         } 
         else 
         {
@@ -250,10 +255,22 @@ static void terminal_command_handler(char * command, void * user_data)
     } 
     if (!command_ok)
     {
-        const char * help_string = "Unknown command.\r\nUsage:\r\n"
-        "RGB <red:0-255> <green:0-255> <blue:0-255>\r\n-or-\r\nHSV <hur:0-360> <saturation:0-100> <value:0-100>\r\n";
-        application_cli_write(app, help_string, strlen(help_string));
+        if (!silent)
+        {   
+            const char * help_string = "Unknown command.\r\nUsage:\r\n"
+            "rgb <red:0-255> <green:0-255> <blue:0-255>\r\n-or-\r\nhsv <hur:0-360> <saturation:0-100> <value:0-100>\r\n";
+            application_cli_write(app, help_string, strlen(help_string));
+        }
     }
+    
+
+}
+
+static void terminal_command_handler(char * command, void * user_data)
+{
+    Application * app = (Application *) user_data;
+    application_handle_cli_command(app, command, false);
+
 }
 
 
@@ -321,7 +338,7 @@ void application_get_color_as_text(Application * app, char * out_buffer, size_t 
    long int norm_h = app->color.hsv.h*360/255;
    long int norm_s = app->color.hsv.s*100/255;
    long int norm_v = app->color.hsv.v*100/255;
-   *out_len = sprintf(out_buffer, "HSV %ld %ld %ld", 
+   *out_len = sprintf(out_buffer, "hsv %ld %ld %ld", 
             norm_h, norm_s, norm_v );
 }
 
@@ -332,17 +349,6 @@ void application_get_color_as_text(Application * app, char * out_buffer, size_t 
  }
 
 
-void application_handle_cli_command(Application * app, const char * command, size_t command_len)
-{
-    if (command_len >= ESTC_HSV_COLOR_BUFFER_MAX_LEN)
-    {
-        //it is not well-formed command
-        return;
-    }
-    
-    char auxbuffer[ESTC_HSV_COLOR_BUFFER_MAX_LEN];
-    
 
-}
 
 Application app;

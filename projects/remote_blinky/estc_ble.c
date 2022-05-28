@@ -15,7 +15,7 @@
 #include <ble_conn_params.h>
 #include <app_timer.h>
 
-#define ESTC_BLE_APP_ADV_DURATION        18000                                   /**< The advertising duration (180 seconds) in units of 10 milliseconds. */
+#define ESTC_BLE_APP_ADV_DURATION        90000                                   /**< The advertising duration in units of 10 milliseconds. */
 #define ESTC_BLE_APP_ADV_INTERVAL        300                                     /**< The advertising interval (in units of 0.625 ms. This value corresponds to 187.5 ms). */
 #define ESTC_BLE_CONN_CFG_TAG            1                                       /**< A tag identifying the SoftDevice BLE configuration. */
 

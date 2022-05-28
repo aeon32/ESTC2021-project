@@ -138,6 +138,25 @@ static void power_management_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
+
+static void color_change_handler(Application * app, void * user_data)
+{
+    blinky_service_t * blinky_service = (blinky_service_t *) user_data;
+    uint16_t connection_handle = estc_ble_connection_handle(blinky_service->base.estc_ble);
+
+    if (connection_handle != BLE_CONN_HANDLE_INVALID)
+    {
+        char color_value[ESTC_CLI_COMMAND_MAX_LEN];
+        memset(color_value, ' ', sizeof(color_value));   //padding for better displaying in mobile app
+        size_t outlen;
+        application_get_color_as_text(app, color_value, &outlen );
+        estc_char_notify(connection_handle, &blinky_service->color_char_handle,
+                            (uint8_t * ) color_value, ESTC_CLI_COMMAND_MAX_LEN ); 
+
+    }
+    
+}
+
 static void ble_write_handler(ble_evt_t const * p_ble_evt, void * p_context)
 {
     //ret_code_t err_code = NRF_SUCCESS;
@@ -149,13 +168,25 @@ static void ble_write_handler(ble_evt_t const * p_ble_evt, void * p_context)
          case BLE_GATTS_EVT_WRITE:
          {
             const ble_gatts_evt_write_t *  p_evt_write = &p_ble_evt->evt.gatts_evt.params.write;
-            if (p_evt_write->handle == service->command_char_handle.value_handle)
+            if (p_evt_write->handle == service->command_char_handle.value_handle
+                 && p_evt_write->len <= ESTC_CLI_COMMAND_MAX_LEN
+               )
             {
-                NRF_LOG_INFO("write");
+                char command_buffer[ESTC_CLI_COMMAND_MAX_LEN + 1];
+                memcpy(command_buffer,p_evt_write->data, p_evt_write->len);
+                command_buffer[p_evt_write->len] = '\0';
+                application_handle_cli_command(service->app, command_buffer, true);
 
             }
-            break;
          }
+         break;
+
+         case BLE_GAP_EVT_CONNECTED:
+         {
+             //update value after connection
+             color_change_handler(service->app, service);
+         }
+         break;
     }
 }
 
@@ -170,40 +201,22 @@ static void blinky_service_init(estc_ble_t * estc_ble, Application * app)
    ret_code_t err_code = estc_ble_service_init(&m_blinky_service.base, estc_ble, &base_uuid128, ESTC_SERVICE_UUID );
    APP_ERROR_CHECK(err_code);
 
-   char color_value[ESTC_HSV_COLOR_BUFFER_MAX_LEN];
+   char color_value[ESTC_CLI_COMMAND_MAX_LEN];
    memset(color_value, ' ', sizeof(color_value));   //padding for better displaying in mobile app
    size_t outlen;
    application_get_color_as_text(app, color_value, &outlen );
 
    err_code = estc_ble_add_characteristic(&m_blinky_service.base, ESTC_SERVICE_HSV_COLOR_READ_CHAR_UUID, 
                                            COLOR_READ_CHAR_NAME, (uint8_t *) color_value,
-                                           ESTC_HSV_COLOR_BUFFER_MAX_LEN -1, ESTC_HSV_COLOR_BUFFER_MAX_LEN -1,
+                                           ESTC_CLI_COMMAND_MAX_LEN, ESTC_CLI_COMMAND_MAX_LEN,
                                            ESTC_CHAR_READ | ESTC_CHAR_NOTIFY | ESTC_CHAR_TEXT_FORMAT, &m_blinky_service.color_char_handle);
    APP_ERROR_CHECK(err_code);
 
    err_code = estc_ble_add_characteristic(&m_blinky_service.base, ESTC_SERVICE_COMMAND_CHAR_UUID, 
                                            COMMAND_CHAR_NAME, NULL,
-                                           0, ESTC_HSV_COLOR_BUFFER_MAX_LEN -1,
+                                           0, ESTC_CLI_COMMAND_MAX_LEN,
                                            ESTC_CHAR_WRITE | ESTC_CHAR_TEXT_FORMAT, &m_blinky_service.command_char_handle);   
    NRF_SDH_BLE_OBSERVER(m_write_observer, ESTC_BLE_OBSERVER_PRIO, ble_write_handler, &m_blinky_service);    
-}
-
-static void color_change_handler(Application * app, void * user_data)
-{
-    blinky_service_t * blinky_service = (blinky_service_t *) user_data;
-    uint16_t connection_handle = estc_ble_connection_handle(blinky_service->base.estc_ble);
-
-    if (connection_handle != BLE_CONN_HANDLE_INVALID)
-    {
-        char color_value[ESTC_HSV_COLOR_BUFFER_MAX_LEN];
-        memset(color_value, ' ', sizeof(color_value));   //padding for better displaying in mobile app
-        size_t outlen;
-        application_get_color_as_text(app, color_value, &outlen );
-        estc_char_notify(connection_handle, &blinky_service->color_char_handle,
-                            (uint8_t * ) color_value, ESTC_HSV_COLOR_BUFFER_MAX_LEN -1 ); 
-
-    }
-    
 }
 
 
