@@ -69,7 +69,7 @@ ret_code_t estc_ble_service_init(estc_ble_service_t *service, estc_ble_t * estc_
 **/
 ret_code_t estc_ble_add_characteristic(estc_ble_service_t *service, uint16_t char_id,
                                        const char * description,
-                                       uint8_t * char_data, uint16_t char_data_size,
+                                       uint8_t * char_data, uint16_t char_data_size, uint16_t max_char_data_size,
                                        uint32_t flags, ble_gatts_char_handles_t * out_char_handle)
 {
     
@@ -89,6 +89,14 @@ ret_code_t estc_ble_add_characteristic(estc_ble_service_t *service, uint16_t cha
     char_md.p_char_user_desc = (uint8_t *) description;
     char_md.char_user_desc_max_size = char_md.char_user_desc_size = strlen(description);
 
+    ble_gatts_char_pf_t char_format = {0};
+    if (flags & ESTC_CHAR_TEXT_FORMAT)
+    {
+        char_format.format = BLE_GATT_CPF_FORMAT_UTF8S;
+        char_format.name_space = BLE_GATT_CPF_NAMESPACE_BTSIG;  
+        char_md.p_char_pf = &char_format;
+    }
+
     // Configures attribute metadata. For now we only specify that the attribute will be stored in the softdevice
     ble_gatts_attr_md_t attr_md = { 0 };
     attr_md.vloc = BLE_GATTS_VLOC_STACK;
@@ -104,7 +112,7 @@ ret_code_t estc_ble_add_characteristic(estc_ble_service_t *service, uint16_t cha
     attr_char_value.p_attr_md = &attr_md;
     // Set characteristic length in number of bytes in attr_char_value structure
     attr_char_value.init_len  = char_data_size;
-    attr_char_value.max_len   = char_data_size;
+    attr_char_value.max_len   = max_char_data_size;
     attr_char_value.p_value   = char_data;
 
     // Add new characteristic to the service using 
